@@ -9,9 +9,13 @@ const chartWidth = Math.floor(document.body.clientWidth * 0.9 / 2);
 
 let chartAttributes = {
     width: chartWidth,
-    height: 400,
+    height: 500,
     priceScale: {
         position: 'left',
+        scaleMargins: {
+            top: 0.05,
+            bottom: 0.05,
+        },
     },
     localization: {
         dateFormat: 'yyyy/MM/dd',
@@ -118,7 +122,64 @@ function resampleToHourlyBars(data) {
         result.push(bar);
     });
     return result;
-};
+}
+
+let fetchedData = [];
+
+function updateSeriesScale(series1, series2) {
+    const barsInfo = series2.barsInLogicalRange(chart2.timeScale().getVisibleLogicalRange());
+    const filteredData = fetchedData.filter(e => barsInfo.from <= e.time && e.time <= barsInfo.to);
+
+    const minPrice = d3.min(filteredData, e => e.low);
+    const maxPrice = d3.max(filteredData, e => e.high);
+    const attributes = {
+        autoscaleInfoProvider: () => ({
+            priceRange: {
+                minValue: minPrice,
+                maxValue: maxPrice,
+            },
+            margins: {
+                above: 10,
+                below: 10,
+            },
+        }),
+    };
+    series1.applyOptions(attributes);
+    series2.applyOptions(attributes);
+}
+
+function drawDailyOpenPrice(series1, series2) {
+    if (fetchedData.length === 0) {
+        return;
+    }
+    const localeHourDiff = new Date().getTimezoneOffset() / 60;
+    for (let i = fetchedData.length - 1; i >= 0; --i) {
+        const date = new Date(fetchedData[i].time * 1000);
+        if ((date.getHours() + localeHourDiff + 24) % 24 === 18 && date.getMinutes() === 0) {
+            const dailyOpenPrice = fetchedData[i].open;
+            attachPriceLineToSeries(series1, dailyOpenPrice);
+            attachPriceLineToSeries(series2, dailyOpenPrice);
+            return;
+        }
+    }
+}
+
+function attachPriceLineToSeries(series, price) {
+    if (series.priceLine !== undefined) {
+        if (price === series.priceLine.price) {
+            return;
+        }
+        series.removePriceLine(series.priceLine);
+    }
+    let priceLine = series.createPriceLine({
+        price: price,
+        color: 'rgba(207, 166, 0, 1)',
+        lineWidth: 2,
+        lineStyle: LightweightCharts.LineStyle.Solid,
+    });
+    priceLine.price = price;
+    series.priceLine = priceLine;
+}
 
 
 const socket = new WebSocket(`ws://${window.location.host}/ticker/MES`);
@@ -133,24 +194,50 @@ socket.onmessage = function (e) {
     if (response.hasOwnProperty('data')) {
         const ticker = response['ticker'];
         const data = (response['data']);
-        const dataHourly = resampleToHourlyBars(data);
-        candleSeries1.setData(dataHourly);
-        candleSeries2.setData(data);
+        if (data.length === 1) {
+            // step
+            const bar = data[0];
+            const lastDataTime = fetchedData[fetchedData.length - 1].time;
+            if (bar.time == lastDataTime) {
+                console.log('Last bar!');
+                return;
+            }
+            fetchedData.push(bar);
+            const hourlyData = resampleToHourlyBars(fetchedData);
+            candleSeries1.setData(hourlyData);
+            candleSeries2.update(bar);
+        } else {
+            // init
+            const hourlyData = resampleToHourlyBars(data);
+            candleSeries1.setData(hourlyData);
+            candleSeries2.setData(data);
+            fetchedData = data;
 
-        candleSeries1.applyOptions({
-            priceFormat: TICKER_PRICE_FORMAT[ticker],
-        });
-        candleSeries2.applyOptions({
-            priceFormat: TICKER_PRICE_FORMAT[ticker],
-        });
+            candleSeries1.applyOptions({
+                priceFormat: TICKER_PRICE_FORMAT[ticker],
+            });
+            candleSeries2.applyOptions({
+                priceFormat: TICKER_PRICE_FORMAT[ticker],
+            });
+        }
+        updateSeriesScale(candleSeries1, candleSeries2);
+        drawDailyOpenPrice(candleSeries1, candleSeries2);
     }
 }
 
 socket.onclose = function (e) {
-    console.log('bye');
+    console.log('close bye');
 }
 
 socket.onerror = function (e) {
-    console.log('bye');
+    console.log('error bye');
 }
 //console.log(socket);
+
+
+window.addEventListener('keydown', function(event) {
+    console.log(`KeyboardEvent: code='${event.code}'`);
+    if (event.code === 'Space') {
+        socket.send(JSON.stringify({ action: 'step' }));
+    }
+}, true);

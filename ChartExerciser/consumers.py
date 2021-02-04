@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 import json
 from pathlib import Path
 from channels.generic.websocket import WebsocketConsumer
@@ -55,8 +55,18 @@ class PriceConsumer(WebsocketConsumer):
             return True
         return False
 
-    def set_chart_time(self, timestamp: datetime) -> None:
+    def set_chart_time(self, timestamp: datetime.datetime) -> None:
         self.now = timestamp
+
+    def step_chart_time(self) -> datetime.datetime:
+        pos = self.df.index.get_loc(self.now, method='nearest')
+        if pos + 1 >= len(self.df.index):
+            # already last frame
+            return self.now
+        row = self.df.iloc[[pos + 1]]
+        timestamp = row.index.to_pydatetime()[0]
+        self.set_chart_time(timestamp)
+        return timestamp
 
     def connect(self) -> None:
         print('-> connect()')
@@ -68,8 +78,8 @@ class PriceConsumer(WebsocketConsumer):
             pass
 
         if self.set_ticker(ticker):
-            timestamp = '2020-01-07 17:00:00'
-            self.set_chart_time(datetime.fromisoformat(timestamp))
+            timestamp = datetime.datetime.fromisoformat('2020-01-13 16:00:00')
+            self.set_chart_time(timestamp)
             self.accept()
         else:
             self.close()
@@ -77,13 +87,12 @@ class PriceConsumer(WebsocketConsumer):
     def disconnect(self, close_code) -> None:
         print('bye')
 
-    def sliced_price_data(self, end_timestamp: datetime = None) -> pd.DataFrame:
-        if not end_timestamp:
+    def sliced_price_data(self, end_timestamp: datetime.datetime = None, n_bars: int = 1) -> pd.DataFrame:
+        if end_timestamp is None:
             end_timestamp = self.now
-        N_BARS = int(2 * 23 * 60 / 5)
-        dt = pd.to_datetime(end_timestamp)
-        end_index = self.df.index.get_loc(dt, method='nearest') + 1
-        start_index = max(0, end_index - N_BARS)
+
+        end_index = self.df.index.get_loc(end_timestamp, method='nearest') + 1
+        start_index = max(0, end_index - n_bars)
         df = self.df[start_index:end_index]
 
         result = []
@@ -103,6 +112,14 @@ class PriceConsumer(WebsocketConsumer):
         action = message['action']
         print('action:', action)
         if action == 'init':
+            n_bars = int(2 * 23 * 60 / 5)
+            response = {
+                'ticker': self.ticker,
+                'data': self.sliced_price_data(n_bars=n_bars),
+            }
+            return json.dumps(response)
+        elif action == 'step':
+            self.step_chart_time()
             response = {
                 'ticker': self.ticker,
                 'data': self.sliced_price_data(),

@@ -1,0 +1,32 @@
+{
+    "ES": {
+        "precision": 2,
+        "minMove": 0.25,
+        "tickValue": 12.5
+    },
+    "MES": {
+        "precision": 2,
+        "minMove": 0.25,
+        "tickValue": 1.25
+    },
+    "NQ": {
+        "precision": 2,
+        "minMove": 0.25,
+        "tickValue": 5.0
+    },
+    "MNQ": {
+        "precision": 2,
+        "minMove": 0.25,
+        "tickValue": 0.5
+    },
+    "CL": {
+        "precision": 2,
+        "minMove": 0.01,
+        "tickValue": 10.0
+    },
+    "GC": {
+        "precision": 1,
+        "minMove": 0.1,
+        "tickValue": 10.0
+    }
+}

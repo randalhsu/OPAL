@@ -239,7 +239,7 @@ function copyTextToClipboard(text) {
     document.body.removeChild(textArea);
 }
 
-function updateCurrentDatetimeLabel(timestamp) {
+function updateCurrentDatetimePicker(timestamp) {
     if (typeof timestamp === 'number') {
         $('#datetimepicker1').datetimepicker('date', moment.utc(timestamp * 1000));
     }
@@ -293,10 +293,11 @@ socket.onmessage = function (e) {
         }
         updateSeriesScale(candleSeries1, candleSeries2);
         drawDailyOpenPrice(candleSeries1, candleSeries2);
-        updateCurrentDatetimeLabel(getCurrentChartTime());
+        updateCurrentDatetimePicker(getCurrentChartTime());
     }
 }
 
+//TODO: on leave page
 socket.onclose = function (e) {
     console.log('close bye');
 }
@@ -332,7 +333,7 @@ function sendGotoAction(timestamp) {
 
 
 function registerKeyboardHandler() {
-    window.addEventListener('keydown', function(event) {
+    window.addEventListener('keydown', function (event) {
         console.log(`KeyboardEvent: code='${event.code}'`);
         if (event.code === 'Space') {
             sendStepAction();
@@ -340,7 +341,7 @@ function registerKeyboardHandler() {
     }, true);
 }
 
-window.onload = function() {
+window.onload = function () {
     $('#datetimepicker1').datetimepicker({
         format: 'YYYY/MM/DD HH:mm',
         dayViewHeaderFormat: 'YYYY/MM',
@@ -349,7 +350,7 @@ window.onload = function() {
         useCurrent: false,
     });
 
-    $('#datetimepicker1').on('hide.datetimepicker', ({date}) => {
+    $('#datetimepicker1').on('hide.datetimepicker', ({ date }) => {
         const localeSecondDiff = new Date().getTimezoneOffset() * 60;
         const newTime = date.utc().format('X') - localeSecondDiff;
         if (newTime !== getCurrentChartTime()) {

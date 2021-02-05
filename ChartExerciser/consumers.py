@@ -6,7 +6,7 @@ from channels.generic.websocket import WebsocketConsumer
 import pandas as pd
 
 
-def resample(df: pd.DataFrame, resampled_timeframe_in_minutes: int = 5) -> pd.DataFrame:
+def resample(df: pd.DataFrame, resampled_timeframe_in_minutes: int) -> pd.DataFrame:
     RESAMPLE_MAP = {
         'open': 'first',
         'high': 'max',
@@ -16,12 +16,18 @@ def resample(df: pd.DataFrame, resampled_timeframe_in_minutes: int = 5) -> pd.Da
     return df.resample(f'{resampled_timeframe_in_minutes}T').agg(RESAMPLE_MAP).dropna()
 
 
-def load_csv_file(filepath: Path) -> pd.DataFrame:
+def get_time_range_of_dataframe(df: pd.DataFrame) -> tuple[datetime.datetime, datetime.datetime]:
+    start_time = df.iloc[[0]].index.to_pydatetime()[0]
+    end_time = df.iloc[[-1]].index.to_pydatetime()[0]
+    return (start_time, end_time)
+
+
+def load_csv_file_into_dataframe(filepath: Path) -> pd.DataFrame:
     FIELD_NAMES = ('time', 'open', 'high', 'low', 'close', 'volume')
     df = pd.read_csv(filepath, names=FIELD_NAMES)
     df = df.drop('volume', axis=1).set_index('time').apply(pd.to_numeric)
     df.index = pd.to_datetime(df.index)
-    df = resample(df)
+    df = resample(df, 5)
     return df
 
 
@@ -30,7 +36,7 @@ def load_all_price_data() -> dict[str, pd.DataFrame]:
     price_data = {}
     for file in sorted(path.glob('*.txt')):
         try:
-            price_data[file.stem] = load_csv_file(file)
+            price_data[file.stem] = load_csv_file_into_dataframe(file)
         except:
             print(f'Failed to load "{file}"...')
         else:
@@ -50,7 +56,7 @@ class PriceConsumer(WebsocketConsumer):
     def __init__(self, *args, **kwargs) -> None:
         self.ticker = ''
         self.df = None
-        self.now = None
+        self.now = datetime.datetime.now()
         super().__init__(*args, **kwargs)
 
     def connect(self) -> None:
@@ -105,8 +111,7 @@ class PriceConsumer(WebsocketConsumer):
         return datetime.datetime.utcfromtimestamp(timestamp)
 
     def jump_to_random_time(self) -> None:
-        start_time = self.df.iloc[[0]].index.to_pydatetime()[0]
-        end_time = self.df.iloc[[-1]].index.to_pydatetime()[0]
+        start_time, end_time = get_time_range_of_dataframe(self.df)
         random_time = self.get_random_time(start_time, end_time)
         self.set_chart_time(random_time)
 
@@ -156,8 +161,7 @@ class PriceConsumer(WebsocketConsumer):
             ticker = message.get('ticker')
             if self.set_ticker(ticker):
                 # check if current time fits into new ticker's range
-                start_time = self.df.iloc[[0]].index.to_pydatetime()[0]
-                end_time = self.df.iloc[[-1]].index.to_pydatetime()[0]
+                start_time, end_time = get_time_range_of_dataframe(self.df)
                 if not (start_time <= self.get_chart_time() <= end_time):
                     self.jump_to_random_time()
 

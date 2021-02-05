@@ -192,6 +192,14 @@ function attachPriceLineToSeries(series, price) {
     series.priceLine = priceLine;
 }
 
+function showMessage(message, timeout = 0) {
+    const el = document.getElementById('message');
+    el.innerText = message;
+    if (timeout > 0) {
+        setTimeout(() => el.innerText = '', timeout);
+    }
+}
+
 function registerChangeTickerHandler() {
     const buttons = document.getElementById('ticker-selector').querySelectorAll('button');
     for (const button of buttons) {
@@ -233,9 +241,7 @@ function copyTextToClipboard(text) {
     } catch (error) {
         console.log(error);
     }
-    const el = document.getElementById('message');
-    el.innerText = message;
-    setTimeout(() => el.innerText = '', 1000);
+    showMessage(message, 1500);
     document.body.removeChild(textArea);
 }
 

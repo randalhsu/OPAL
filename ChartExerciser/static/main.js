@@ -297,7 +297,6 @@ socket.onmessage = function (e) {
     }
 }
 
-//TODO: on leave page
 socket.onclose = function (e) {
     console.log('close bye');
 }
@@ -357,4 +356,8 @@ window.onload = function () {
             sendGotoAction(newTime);
         }
     })
+};
+
+window.onbeforeunload = function () {
+    socket.close();
 };

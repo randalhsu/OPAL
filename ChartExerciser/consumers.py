@@ -44,11 +44,32 @@ def load_all_price_data() -> dict[str, pd.DataFrame]:
     return price_data
 
 
-PRICE_DATA = load_all_price_data()
-
-
 def get_all_tickers() -> list[str]:
     return list(PRICE_DATA.keys())
+
+
+def load_tickers_info():
+    tickers_info = {}
+    data = None
+    with open('static/PriceData/tickers_info.json') as f:
+        data = json.load(f)
+
+    EPOCH = datetime.datetime.utcfromtimestamp(0)
+    for ticker, info in data.items():
+        if ticker in PRICE_DATA:
+            df = PRICE_DATA[ticker]
+            start_time, end_time = get_time_range_of_dataframe(df)
+            start_timestamp = int((start_time - EPOCH).total_seconds())
+            end_timestamp = int((end_time - EPOCH).total_seconds())
+            info['minDate'] = start_timestamp
+            info['maxDate'] = end_timestamp
+            tickers_info[ticker] = info
+    return tickers_info
+
+
+PRICE_DATA = load_all_price_data()
+
+TICKERS_INFO = load_tickers_info()
 
 
 class PriceConsumer(WebsocketConsumer):
@@ -104,10 +125,10 @@ class PriceConsumer(WebsocketConsumer):
         EPOCH = datetime.datetime.utcfromtimestamp(0)
         MARGIN = datetime.timedelta(days=1)
         FIVE_MINUTES_IN_SECONDS = 60 * 5
-        start_time_timestamp = (start_time + MARGIN - EPOCH).total_seconds()
-        end_time_timestamp = (end_time - MARGIN - EPOCH).total_seconds()
+        start_timestamp = (start_time + MARGIN - EPOCH).total_seconds()
+        end_timestamp = (end_time - MARGIN - EPOCH).total_seconds()
         timestamp = random.randrange(
-            start_time_timestamp, end_time_timestamp, FIVE_MINUTES_IN_SECONDS)
+            start_timestamp, end_timestamp, FIVE_MINUTES_IN_SECONDS)
         return datetime.datetime.utcfromtimestamp(timestamp)
 
     def jump_to_random_time(self) -> None:
@@ -144,15 +165,15 @@ class PriceConsumer(WebsocketConsumer):
         action = message.get('action')
         print('action:', action)
         if action == 'init':
-            self.jump_to_random_time()
             response = {
-                'ticker': self.ticker,
-                'data': self.get_sliced_price_data(),
+                'action': action,
+                'data': TICKERS_INFO,
             }
             return json.dumps(response)
         elif action == 'step':
             self.step_chart_time()
             response = {
+                'action': action,
                 'ticker': self.ticker,
                 'data': self.get_sliced_price_data(n_bars=1),
             }
@@ -166,6 +187,7 @@ class PriceConsumer(WebsocketConsumer):
                     self.jump_to_random_time()
 
                 response = {
+                    'action': action,
                     'ticker': self.ticker,
                     'data': self.get_sliced_price_data(),
                 }
@@ -177,6 +199,7 @@ class PriceConsumer(WebsocketConsumer):
                 time = datetime.datetime.utcfromtimestamp(timestamp)
                 self.set_chart_time(time)
                 response = {
+                    'action': action,
                     'ticker': self.ticker,
                     'data': self.get_sliced_price_data(),
                 }

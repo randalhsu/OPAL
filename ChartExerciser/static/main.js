@@ -1,11 +1,9 @@
 const DATETIME_FORMAT = 'YYYY/MM/DD HH:mm';
 
-const TICKER_PRICE_FORMAT = {
-    MES: {
-        precision: 2,
-        minMove: 0.25,
-    },
-};
+let tickersInfo = {};
+//TODO: rename
+let fetchedData = [];
+
 
 const chartWidth = Math.floor(document.body.clientWidth * 0.9 / 2);
 //TODO: resize-able
@@ -129,8 +127,6 @@ function resampleToHourlyBars(data) {
     return result;
 }
 
-let fetchedData = [];
-
 function getCurrentChartTime() {
     if (fetchedData.length > 0) {
         return fetchedData[fetchedData.length - 1].time;
@@ -168,6 +164,7 @@ function drawDailyOpenPrice(series1, series2) {
     const localeHourDiff = new Date().getTimezoneOffset() / 60;
     for (let i = fetchedData.length - 1; i >= 0; --i) {
         const date = new Date(fetchedData[i].time * 1000);
+        //TODO: DST may change hour?
         if ((date.getHours() + localeHourDiff + 24) % 24 === 18 && date.getMinutes() === 0) {
             const dailyOpenPrice = fetchedData[i].open;
             attachPriceLineToSeries(series1, dailyOpenPrice);
@@ -247,13 +244,27 @@ function copyTextToClipboard(text) {
     document.body.removeChild(textArea);
 }
 
-function updateCurrentDatetimePicker(timestamp) {
+function updateDatetimepickerCurrentDatetime(timestamp) {
     if (typeof timestamp === 'number') {
         $('#datetimepicker1').datetimepicker('date', moment.utc(timestamp * 1000));
     }
 }
 
+function updateDatetimepickerRange(ticker) {
+    // Reset first, otherwise may get error due to minDate > maxDate
+    const veryMinDate = moment.utc(946684800000);
+    const veryMaxDate = moment.utc(4102444800000);
+    $('#datetimepicker1').datetimepicker('minDate', veryMinDate);
+    $('#datetimepicker1').datetimepicker('maxDate', veryMaxDate);
 
+    const minDate = moment.utc(tickersInfo[ticker].minDate * 1000);
+    const maxDate = moment.utc(tickersInfo[ticker].maxDate * 1000);
+    $('#datetimepicker1').datetimepicker('minDate', minDate);
+    $('#datetimepicker1').datetimepicker('maxDate', maxDate);
+}
+
+
+//TODO: change path
 const socket = new WebSocket(`ws://${window.location.host}/ticker/MES`);
 
 socket.onopen = function (e) {
@@ -262,47 +273,53 @@ socket.onopen = function (e) {
     registerKeyboardHandler();
 
     sendInitAction();
+    sendSwitchAction('MES');
 }
 
 socket.onmessage = function (e) {
     const response = JSON.parse(e.data);
+    let hourlyData;
     //console.log(response);
-    if (response.hasOwnProperty('data')) {
-        const ticker = response['ticker'];
-        const data = (response['data']);
-        if (data.length === 0) {
-            console.log('error: empty data!')
-            return
-        }
-        if (data.length === 1) {
-            // step
-            const bar = data[0];
+    switch (response.action) {
+        case 'init':
+            tickersInfo = response.data;
+            return;
+            break;
+
+        case 'step':
+            const bar = response.data[0];
             if (bar.time == getCurrentChartTime()) {
-                console.log('Last bar!');
+                showMessage('Already reached final bar!', 2000);
                 return;
             }
             fetchedData.push(bar);
-            const hourlyData = resampleToHourlyBars(fetchedData);
+            hourlyData = resampleToHourlyBars(fetchedData);
             candleSeries1.setData(hourlyData);
             candleSeries2.update(bar);
-        } else {
-            // init, switch, goto
-            const hourlyData = resampleToHourlyBars(data);
+            break;
+
+        case 'switch':
+        case 'goto':
+            const data = response.data;
+            const ticker = response.ticker;
+            hourlyData = resampleToHourlyBars(data);
             candleSeries1.setData(hourlyData);
             candleSeries2.setData(data);
             fetchedData = data;
 
             candleSeries1.applyOptions({
-                priceFormat: TICKER_PRICE_FORMAT[ticker],
+                priceFormat: tickersInfo[ticker],
             });
             candleSeries2.applyOptions({
-                priceFormat: TICKER_PRICE_FORMAT[ticker],
+                priceFormat: tickersInfo[ticker],
             });
-        }
-        updateSeriesScale(candleSeries1, candleSeries2);
-        drawDailyOpenPrice(candleSeries1, candleSeries2);
-        updateCurrentDatetimePicker(getCurrentChartTime());
+
+            updateDatetimepickerRange(ticker);
+            break;
     }
+    updateSeriesScale(candleSeries1, candleSeries2);
+    drawDailyOpenPrice(candleSeries1, candleSeries2);
+    updateDatetimepickerCurrentDatetime(getCurrentChartTime());
 }
 
 socket.onclose = function (e) {
@@ -365,7 +382,7 @@ window.onload = function () {
         }
     });
     datetimepickerInput.addEventListener('keydown', (event) => {
-        if (event.code === 'Enter') {
+        if (event.code === 'Enter' || event.code === 'NumpadEnter') {
             event.target.blur();
         }
     });

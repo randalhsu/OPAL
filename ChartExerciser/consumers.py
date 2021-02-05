@@ -1,6 +1,7 @@
 import datetime
 import json
 from pathlib import Path
+import random
 from channels.generic.websocket import WebsocketConsumer
 import pandas as pd
 
@@ -27,7 +28,7 @@ def load_csv_file(filepath: Path) -> pd.DataFrame:
 def load_all_price_data() -> dict[str, pd.DataFrame]:
     path = Path('static/PriceData')
     price_data = {}
-    for file in path.glob('*.txt'):
+    for file in sorted(path.glob('*.txt')):
         try:
             price_data[file.stem] = load_csv_file(file)
         except:
@@ -38,6 +39,10 @@ def load_all_price_data() -> dict[str, pd.DataFrame]:
 
 
 PRICE_DATA = load_all_price_data()
+
+
+def get_all_tickers() -> list[str]:
+    return list(PRICE_DATA.keys())
 
 
 class PriceConsumer(WebsocketConsumer):
@@ -55,18 +60,18 @@ class PriceConsumer(WebsocketConsumer):
             return True
         return False
 
-    def set_chart_time(self, timestamp: datetime.datetime) -> None:
-        self.now = timestamp
+    def set_chart_time(self, time: datetime.datetime) -> None:
+        self.now = time
 
     def step_chart_time(self) -> datetime.datetime:
-        pos = self.df.index.get_loc(self.now, method='nearest')
+        pos = self.df.index.get_loc(self.now, method='backfill')
         if pos + 1 >= len(self.df.index):
             # already last frame
             return self.now
         row = self.df.iloc[[pos + 1]]
-        timestamp = row.index.to_pydatetime()[0]
-        self.set_chart_time(timestamp)
-        return timestamp
+        time = row.index.to_pydatetime()[0]
+        self.set_chart_time(time)
+        return time
 
     def connect(self) -> None:
         print('-> connect()')
@@ -78,8 +83,8 @@ class PriceConsumer(WebsocketConsumer):
             pass
 
         if self.set_ticker(ticker):
-            timestamp = datetime.datetime.fromisoformat('2020-01-13 16:00:00')
-            self.set_chart_time(timestamp)
+            #time = datetime.datetime.fromisoformat('2020-01-13 16:00:00')
+            #self.set_chart_time(time)
             self.accept()
         else:
             self.close()
@@ -87,11 +92,30 @@ class PriceConsumer(WebsocketConsumer):
     def disconnect(self, close_code) -> None:
         print('bye')
 
-    def sliced_price_data(self, end_timestamp: datetime.datetime = None, n_bars: int = 1) -> pd.DataFrame:
-        if end_timestamp is None:
-            end_timestamp = self.now
+    def get_random_time(self, start_time: datetime.datetime, end_time: datetime.datetime) -> datetime.datetime:
+        MARGIN = datetime.timedelta(days=1)
+        FIVE_MINUTES_IN_SECONDS = 60 * 5
+        EPOCH = datetime.datetime.utcfromtimestamp(0)
+        start_time_timestamp = (start_time + MARGIN - EPOCH).total_seconds()
+        end_time_timestamp = (end_time - MARGIN - EPOCH).total_seconds()
+        timestamp = random.randrange(start_time_timestamp, end_time_timestamp, FIVE_MINUTES_IN_SECONDS)
+        return datetime.datetime.utcfromtimestamp(timestamp)
 
-        end_index = self.df.index.get_loc(end_timestamp, method='nearest') + 1
+    def jump_to_random_time(self) -> None:
+        start_time = self.df.iloc[[0]].index.to_pydatetime()[0]
+        end_time = self.df.iloc[[-1]].index.to_pydatetime()[0]
+        random_time = self.get_random_time(start_time, end_time)
+        self.set_chart_time(random_time)
+
+    def sliced_price_data(self, end_time: datetime.datetime = None, n_bars: int = None) -> pd.DataFrame:
+        if end_time is None:
+            end_time = self.now
+
+        if n_bars is None:
+            # Two days' 5-min bars
+            n_bars = int(2 * 23 * 60 / 5)
+
+        end_index = self.df.index.get_loc(end_time, method='backfill') + 1
         start_index = max(0, end_index - n_bars)
         df = self.df[start_index:end_index]
 
@@ -109,23 +133,49 @@ class PriceConsumer(WebsocketConsumer):
 
     def generate_response(self, text_data: str) -> str:
         message = json.loads(text_data)
-        action = message['action']
+        action = message.get('action')
         print('action:', action)
         if action == 'init':
-            n_bars = int(2 * 23 * 60 / 5)
+            self.jump_to_random_time()
             response = {
                 'ticker': self.ticker,
-                'data': self.sliced_price_data(n_bars=n_bars),
+                'data': self.sliced_price_data(),
             }
             return json.dumps(response)
         elif action == 'step':
             self.step_chart_time()
             response = {
                 'ticker': self.ticker,
-                'data': self.sliced_price_data(),
+                'data': self.sliced_price_data(n_bars=1),
             }
             return json.dumps(response)
-        return ''
+        elif action == 'switch':
+            ticker = message.get('ticker')
+            if self.set_ticker(ticker):
+                start_time = self.df.iloc[[0]].index.to_pydatetime()[0]
+                end_time = self.df.iloc[[-1]].index.to_pydatetime()[0]
+                if not (start_time <= self.now <= end_time):
+                    self.jump_to_random_time()
+
+                response = {
+                    'ticker': self.ticker,
+                    'data': self.sliced_price_data(),
+                }
+                return json.dumps(response)
+            return json.dumps({'error': 'unknown ticker'})
+        elif action == 'goto':
+            timestamp = message.get('timestamp')
+            if timestamp:
+                time = datetime.datetime.utcfromtimestamp(timestamp)
+                self.set_chart_time(time)
+                response = {
+                    'ticker': self.ticker,
+                    'data': self.sliced_price_data(),
+                }
+                return json.dumps(response)
+            return json.dumps({'error': 'unknown timestamp'})
+
+        return json.dumps({'error': 'unknown action'})
 
     def receive(self, text_data=None, bytes_data=None) -> None:
         print('-> receive()', text_data)

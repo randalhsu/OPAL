@@ -6,6 +6,7 @@ const TICKER_PRICE_FORMAT = {
 };
 
 const chartWidth = Math.floor(document.body.clientWidth * 0.9 / 2);
+//TODO: resize-able
 
 let chartAttributes = {
     width: chartWidth,
@@ -113,19 +114,29 @@ function resampleToHourlyBars(data) {
     const allHours = [...new Set(data.map(bar => Math.floor(bar.time / 3600)))];
     allHours.forEach(hour => {
         const filteredData = data.filter(e => Math.floor(e.time / 3600) === hour);
-        let bar = {};
-        bar.time = hour * 3600;
-        bar.open = filteredData[0].open;
-        bar.close = filteredData[filteredData.length - 1].close;
-        bar.high = d3.max(filteredData, e => e.high);
-        bar.low = d3.min(filteredData, e => e.low);
-        result.push(bar);
+        if (filteredData.length > 0) {
+            let bar = {};
+            bar.time = hour * 3600;
+            bar.open = filteredData[0].open;
+            bar.close = filteredData[filteredData.length - 1].close;
+            bar.high = d3.max(filteredData, e => e.high);
+            bar.low = d3.min(filteredData, e => e.low);
+            result.push(bar);
+        }
     });
     return result;
 }
 
 let fetchedData = [];
 
+function getCurrentChartTime() {
+    if (fetchedData.length > 0) {
+        return fetchedData[fetchedData.length - 1].time;
+    }
+    return null;
+}
+
+//TODO: fit to a chart
 function updateSeriesScale(series1, series2) {
     const barsInfo = series2.barsInLogicalRange(chart2.timeScale().getVisibleLogicalRange());
     const filteredData = fetchedData.filter(e => barsInfo.from <= e.time && e.time <= barsInfo.to);
@@ -181,11 +192,68 @@ function attachPriceLineToSeries(series, price) {
     series.priceLine = priceLine;
 }
 
+function registerChangeTickerHandler() {
+    const buttons = document.getElementById('ticker-selector').querySelectorAll('button');
+    for (const button of buttons) {
+        button.onclick = () => {
+            const ticker = button.innerText;
+            const currentTickerNode = document.getElementById('current-ticker');
+            const currentTicker = currentTickerNode.innerText;
+            if (ticker !== currentTicker) {
+                fetchedData = [];
+                sendSwitchAction(ticker);
+                currentTickerNode.innerText = ticker;
+            }
+        }
+    }
+}
+
+function registerCopyDatetimeHandler() {
+    const button = document.getElementById('copy-datetime-button');
+    button.onclick = () => {
+        const string = $('#datetimepicker1').datetimepicker('date').format('YYYY/MM/DD HH:mm');
+        copyTextToClipboard(string);
+    }
+}
+
+function copyTextToClipboard(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.top = '0';
+    textArea.style.left = '0';
+    textArea.style.position = 'fixed';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    let message = 'Failed to copy!';
+    try {
+        if (document.execCommand('copy')) {
+            message = 'Copied datetime!';
+        }
+    } catch (error) {
+        console.log(error);
+    }
+    const el = document.getElementById('message');
+    el.innerText = message;
+    setTimeout(() => el.innerText = '', 1000);
+    document.body.removeChild(textArea);
+}
+
+function updateCurrentDatetimeLabel(timestamp) {
+    if (typeof timestamp === 'number') {
+        $('#datetimepicker1').datetimepicker('date', moment.utc(timestamp * 1000));
+    }
+}
+
 
 const socket = new WebSocket(`ws://${window.location.host}/ticker/MES`);
 
 socket.onopen = function (e) {
-    socket.send(JSON.stringify({ action: 'init' }));
+    registerChangeTickerHandler();
+    registerCopyDatetimeHandler();
+    registerKeyboardHandler();
+
+    sendInitAction();
 }
 
 socket.onmessage = function (e) {
@@ -194,11 +262,14 @@ socket.onmessage = function (e) {
     if (response.hasOwnProperty('data')) {
         const ticker = response['ticker'];
         const data = (response['data']);
+        if (data.length === 0) {
+            console.log('error: empty data!')
+            return
+        }
         if (data.length === 1) {
             // step
             const bar = data[0];
-            const lastDataTime = fetchedData[fetchedData.length - 1].time;
-            if (bar.time == lastDataTime) {
+            if (bar.time == getCurrentChartTime()) {
                 console.log('Last bar!');
                 return;
             }
@@ -207,7 +278,7 @@ socket.onmessage = function (e) {
             candleSeries1.setData(hourlyData);
             candleSeries2.update(bar);
         } else {
-            // init
+            // init, switch, goto
             const hourlyData = resampleToHourlyBars(data);
             candleSeries1.setData(hourlyData);
             candleSeries2.setData(data);
@@ -222,6 +293,7 @@ socket.onmessage = function (e) {
         }
         updateSeriesScale(candleSeries1, candleSeries2);
         drawDailyOpenPrice(candleSeries1, candleSeries2);
+        updateCurrentDatetimeLabel(getCurrentChartTime());
     }
 }
 
@@ -234,10 +306,54 @@ socket.onerror = function (e) {
 }
 //console.log(socket);
 
+function sendInitAction() {
+    socket.send(JSON.stringify({ action: 'init' }));
+}
 
-window.addEventListener('keydown', function(event) {
-    console.log(`KeyboardEvent: code='${event.code}'`);
-    if (event.code === 'Space') {
-        socket.send(JSON.stringify({ action: 'step' }));
-    }
-}, true);
+function sendStepAction() {
+    socket.send(JSON.stringify({ action: 'step' }));
+}
+
+function sendSwitchAction(ticker) {
+    // Change ticker
+    socket.send(JSON.stringify({
+        action: 'switch',
+        ticker: ticker,
+    }));
+}
+
+function sendGotoAction(timestamp) {
+    // Change time
+    socket.send(JSON.stringify({
+        action: 'goto',
+        timestamp: timestamp,
+    }));
+}
+
+
+function registerKeyboardHandler() {
+    window.addEventListener('keydown', function(event) {
+        console.log(`KeyboardEvent: code='${event.code}'`);
+        if (event.code === 'Space') {
+            sendStepAction();
+        }
+    }, true);
+}
+
+window.onload = function() {
+    $('#datetimepicker1').datetimepicker({
+        format: 'YYYY/MM/DD HH:mm',
+        dayViewHeaderFormat: 'YYYY/MM',
+        stepping: 5,
+        sideBySide: true,
+        useCurrent: false,
+    });
+
+    $('#datetimepicker1').on('hide.datetimepicker', ({date}) => {
+        const localeSecondDiff = new Date().getTimezoneOffset() * 60;
+        const newTime = date.utc().format('X') - localeSecondDiff;
+        if (newTime !== getCurrentChartTime()) {
+            sendGotoAction(newTime);
+        }
+    })
+};

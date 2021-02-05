@@ -5,23 +5,44 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/css/tempusdominus-bootstrap-4.min.css" integrity="sha512-3JRrEUwaCkFUBLK1N8HehwQgu8e23jTH4np5NHOmQOobuC4ROQxFwFgBLTnhcnQRMs84muMh0PnnwXlPq5MGjg==" crossorigin="anonymous" />
 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js" integrity="sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/js/tempusdominus-bootstrap-4.min.js" integrity="sha512-k6/Bkb8Fxf/c1Tkyl39yJwcOZ1P4cRrJu77p83zJjN2Z55prbFHxPs9vN7q3l3+tSMGPDdoH51AEU8Vgo1cgAA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.5.0/d3.min.js" integrity="sha512-0XfwGD1nxplHpehcSVI7lY+m/5L37PNHDt+DOc7aLFckwPXjnjeA1oeNbru7YeI4VLs9i+ADnnHEhP69C9CqTA==" crossorigin="anonymous"></script>
     <!--<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>-->
-    <script src="https://d3js.org/d3.v6.min.js"></script>
     <script src="{% static 'lightweight-charts.standalone.production.js' %}" defer></script>
     <script src="{% static 'main.js' %}" defer></script>
     <title>Chart Exerciser</title>
 </head>
 <body>
-<div class="container-fluid">
-  <div class="row">
-    <div class="col">
-        <p class="text-center font-weight-bold">60K</p>
-    </div>
-    <div class="col">
-        <p class="text-center font-weight-bold">5K</p>
+<div class="container-fluid mt-3">
+  <div class="dropdown d-inline-flex">
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      Ticker
+    </button>
+    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton" id="ticker-selector">
+      {% for ticker in tickers %}
+      <button class="dropdown-item" type="button">{{ ticker }}</button>
+      {% endfor %}
     </div>
   </div>
+  <p class="mx-3 d-inline-flex font-weight-bold" id="current-ticker">MES</p>
+  <div class="form-group d-inline-flex">
+    <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
+    <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker1"/>
+    <div class="input-group-append" data-target="#datetimepicker1" data-toggle="datetimepicker">
+      <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+      </div>
+    </div>
+  </div>
+  <button type="button" class="btn btn-info btn-sm" id="copy-datetime-button">Copy</button>
+  <p class="mx-1 d-inline-flex" id="message"></p>
+</div>
+<div class="container-fluid">
   <div class="row">
     <div class="col d-inline-flex">
         <div id="chart1">
@@ -31,7 +52,5 @@
     </div>
   </div>
 </div>
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
 </body>
 </html>

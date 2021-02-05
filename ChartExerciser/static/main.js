@@ -1,3 +1,5 @@
+const DATETIME_FORMAT = 'YYYY/MM/DD HH:mm';
+
 const TICKER_PRICE_FORMAT = {
     MES: {
         precision: 2,
@@ -219,7 +221,7 @@ function registerChangeTickerHandler() {
 function registerCopyDatetimeHandler() {
     const button = document.getElementById('copy-datetime-button');
     button.onclick = () => {
-        const string = $('#datetimepicker1').datetimepicker('date').format('YYYY/MM/DD HH:mm');
+        const string = $('#datetimepicker1').datetimepicker('date').format(DATETIME_FORMAT);
         copyTextToClipboard(string);
     }
 }
@@ -348,20 +350,25 @@ function registerKeyboardHandler() {
 
 window.onload = function () {
     $('#datetimepicker1').datetimepicker({
-        format: 'YYYY/MM/DD HH:mm',
+        format: DATETIME_FORMAT,
         dayViewHeaderFormat: 'YYYY/MM',
         stepping: 5,
         sideBySide: true,
         useCurrent: false,
     });
 
-    $('#datetimepicker1').on('hide.datetimepicker', ({ date }) => {
-        const localeSecondDiff = new Date().getTimezoneOffset() * 60;
-        const newTime = date.utc().format('X') - localeSecondDiff;
-        if (newTime !== getCurrentChartTime()) {
-            sendGotoAction(newTime);
+    const datetimepickerInput = document.getElementById('datetimepicker-input');
+    datetimepickerInput.addEventListener('blur', (event) => {
+        const timestamp = moment.utc(event.target.value, DATETIME_FORMAT).unix();
+        if (timestamp !== getCurrentChartTime()) {
+            sendGotoAction(timestamp);
         }
-    })
+    });
+    datetimepickerInput.addEventListener('keydown', (event) => {
+        if (event.code === 'Enter') {
+            event.target.blur();
+        }
+    });
 };
 
 window.onbeforeunload = function () {

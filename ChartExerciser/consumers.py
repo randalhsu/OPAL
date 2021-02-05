@@ -169,7 +169,7 @@ class PriceConsumer(WebsocketConsumer):
             return json.dumps({'error': 'unknown ticker'})
         elif action == 'goto':
             timestamp = message.get('timestamp')
-            if timestamp:
+            if isinstance(timestamp, int) and timestamp > 0:
                 time = datetime.datetime.utcfromtimestamp(timestamp)
                 self.set_chart_time(time)
                 response = {

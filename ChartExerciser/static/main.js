@@ -259,13 +259,13 @@ function updateDatetimepickerRange(ticker) {
     const localeSecondDiff = new Date().getTimezoneOffset() * 60;
     const minDate = moment.utc((tickersInfo[ticker].minDate + localeSecondDiff) * 1000);
     const maxDate = moment.utc((tickersInfo[ticker].maxDate + localeSecondDiff) * 1000);
+    console.log('min', minDate, 'max', maxDate);
     $('#datetimepicker1').datetimepicker('minDate', minDate);
     $('#datetimepicker1').datetimepicker('maxDate', maxDate);
 }
 
 
-//TODO: change path
-const socket = new WebSocket(`ws://${window.location.host}/ticker/MES`);
+const socket = new WebSocket(`ws://${window.location.host}/socket`);
 
 socket.onopen = function (e) {
     registerChangeTickerHandler();

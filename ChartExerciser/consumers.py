@@ -83,16 +83,7 @@ class PriceConsumer(WebsocketConsumer):
     def connect(self) -> None:
         print('-> connect()')
         # print(self.scope)
-        ticker = ''
-        try:
-            ticker = self.scope['url_route']['kwargs']['ticker']
-        except:
-            pass
-
-        if self.set_ticker(ticker):
-            self.accept()
-        else:
-            self.close()
+        self.accept()
 
     def disconnect(self, close_code) -> None:
         print('bye')

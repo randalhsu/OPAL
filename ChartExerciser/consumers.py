@@ -104,6 +104,12 @@ class PriceConsumer(WebsocketConsumer):
             return True
         return False
 
+    def set_chart_timestamp(self, timestamp: int) -> bool:
+        if isinstance(timestamp, int) and timestamp > 0:
+            time = datetime.datetime.utcfromtimestamp(timestamp)
+            return self.set_chart_time(time)
+        return False
+
     def get_chart_time(self) -> datetime.datetime:
         return self.now
 
@@ -181,10 +187,18 @@ class PriceConsumer(WebsocketConsumer):
             self.step_chart_time()
             response = {
                 'action': action,
-                'ticker': self.ticker,
                 'data': self.get_sliced_price_data(n_bars=1),
             }
             return json.dumps(response)
+        elif action == 'stepback':
+            timestamp = message.get('timestamp')
+            if self.set_chart_timestamp(timestamp):
+                response = {
+                    'action': action,
+                    'data': [],
+                }
+                return json.dumps(response)
+            return json.dumps({'error': 'invalid timestamp'})
         elif action == 'switch':
             ticker = message.get('ticker')
             if self.set_ticker(ticker):
@@ -202,15 +216,13 @@ class PriceConsumer(WebsocketConsumer):
             return json.dumps({'error': 'unknown ticker'})
         elif action == 'goto':
             timestamp = message.get('timestamp')
-            if isinstance(timestamp, int) and timestamp > 0:
-                time = datetime.datetime.utcfromtimestamp(timestamp)
-                if self.set_chart_time(time):
-                    response = {
-                        'action': action,
-                        'ticker': self.ticker,
-                        'data': self.get_sliced_price_data(),
-                    }
-                    return json.dumps(response)
+            if self.set_chart_timestamp(timestamp):
+                response = {
+                    'action': action,
+                    'ticker': self.ticker,
+                    'data': self.get_sliced_price_data(),
+                }
+                return json.dumps(response)
             return json.dumps({'error': 'invalid timestamp'})
 
         return json.dumps({'error': 'unknown action'})

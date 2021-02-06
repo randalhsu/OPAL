@@ -298,6 +298,10 @@ socket.onmessage = function (e) {
             candleSeries2.update(bar);
             break;
 
+        case 'stepback':
+            // do nothing
+            break;
+
         case 'switch':
         case 'goto':
             const data = response.data;
@@ -341,6 +345,13 @@ function sendStepAction() {
     socket.send(JSON.stringify({ action: 'step' }));
 }
 
+function sendStepbackAction(timestamp) {
+    socket.send(JSON.stringify({
+        action: 'stepback',
+        timestamp: timestamp,
+    }));
+}
+
 function sendSwitchAction(ticker) {
     // Change ticker
     socket.send(JSON.stringify({
@@ -361,14 +372,29 @@ function sendGotoAction(timestamp) {
 function registerKeyboardHandler() {
     window.addEventListener('keydown', function (event) {
         console.log(`KeyboardEvent: code='${event.code}'`);
-        if (event.code === 'Space' || event.code === 'ArrowRight') {
-            const currentTicker = document.getElementById('current-ticker').innerText;
-            const maxDate = tickersInfo[currentTicker].maxDate;
-            if (maxDate == getCurrentChartTime()) {
-                showMessage('Already reached final bar!', 2000);
-                return;
-            }
-            sendStepAction();
+        switch (event.code) {
+            case 'Space':
+            case 'ArrowRight':
+                const currentTicker = document.getElementById('current-ticker').innerText;
+                const maxDate = tickersInfo[currentTicker].maxDate;
+                if (maxDate == getCurrentChartTime()) {
+                    showMessage('Already reached final bar!', 2000);
+                    return;
+                }
+                sendStepAction();
+                break;
+
+            case 'ArrowLeft':
+                if (fetchedBars.length <= 1) {
+                    showMessage('Already reached the first bar!', 2000);
+                    return;
+                }
+                fetchedBars.pop();
+                hourlyData = resampleToHourlyBars(fetchedBars);
+                candleSeries1.setData(hourlyData);
+                candleSeries2.setData(fetchedBars);
+                sendStepbackAction(getCurrentChartTime());
+                break;
         }
     }, true);
 }

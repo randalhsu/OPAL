@@ -1,8 +1,7 @@
 const DATETIME_FORMAT = 'YYYY/MM/DD HH:mm';
 
 let tickersInfo = {};
-//TODO: rename
-let fetchedData = [];
+let fetchedBars = [];
 
 
 const chartWidth = Math.floor(document.body.clientWidth * 0.9 / 2);
@@ -128,8 +127,8 @@ function resampleToHourlyBars(data) {
 }
 
 function getCurrentChartTime() {
-    if (fetchedData.length > 0) {
-        return fetchedData[fetchedData.length - 1].time;
+    if (fetchedBars.length > 0) {
+        return fetchedBars[fetchedBars.length - 1].time;
     }
     return null;
 }
@@ -137,7 +136,7 @@ function getCurrentChartTime() {
 //TODO: fit to a chart
 function updateSeriesScale(series1, series2) {
     const barsInfo = series2.barsInLogicalRange(chart2.timeScale().getVisibleLogicalRange());
-    const filteredData = fetchedData.filter(e => barsInfo.from <= e.time && e.time <= barsInfo.to);
+    const filteredData = fetchedBars.filter(e => barsInfo.from <= e.time && e.time <= barsInfo.to);
 
     const minPrice = d3.min(filteredData, e => e.low);
     const maxPrice = d3.max(filteredData, e => e.high);
@@ -158,15 +157,15 @@ function updateSeriesScale(series1, series2) {
 }
 
 function drawDailyOpenPrice(series1, series2) {
-    if (fetchedData.length === 0) {
+    if (fetchedBars.length === 0) {
         return;
     }
     const localeHourDiff = new Date().getTimezoneOffset() / 60;
-    for (let i = fetchedData.length - 1; i >= 0; --i) {
-        const date = new Date(fetchedData[i].time * 1000);
+    for (let i = fetchedBars.length - 1; i >= 0; --i) {
+        const date = new Date(fetchedBars[i].time * 1000);
         //TODO: DST may change hour?
         if ((date.getHours() + localeHourDiff + 24) % 24 === 18 && date.getMinutes() === 0) {
-            const dailyOpenPrice = fetchedData[i].open;
+            const dailyOpenPrice = fetchedBars[i].open;
             attachPriceLineToSeries(series1, dailyOpenPrice);
             attachPriceLineToSeries(series2, dailyOpenPrice);
             return;
@@ -207,7 +206,7 @@ function registerChangeTickerHandler() {
             const currentTickerNode = document.getElementById('current-ticker');
             const currentTicker = currentTickerNode.innerText;
             if (ticker !== currentTicker) {
-                fetchedData = [];
+                fetchedBars = [];
                 sendSwitchAction(ticker);
                 currentTickerNode.innerText = ticker;
             }
@@ -293,8 +292,8 @@ socket.onmessage = function (e) {
                 showMessage('Already reached final bar!', 2000);
                 return;
             }
-            fetchedData.push(bar);
-            hourlyData = resampleToHourlyBars(fetchedData);
+            fetchedBars.push(bar);
+            hourlyData = resampleToHourlyBars(fetchedBars);
             candleSeries1.setData(hourlyData);
             candleSeries2.update(bar);
             break;
@@ -306,7 +305,7 @@ socket.onmessage = function (e) {
             hourlyData = resampleToHourlyBars(data);
             candleSeries1.setData(hourlyData);
             candleSeries2.setData(data);
-            fetchedData = data;
+            fetchedBars = data;
 
             candleSeries1.applyOptions({
                 priceFormat: tickersInfo[ticker],

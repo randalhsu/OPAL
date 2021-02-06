@@ -257,8 +257,9 @@ function updateDatetimepickerRange(ticker) {
     $('#datetimepicker1').datetimepicker('minDate', veryMinDate);
     $('#datetimepicker1').datetimepicker('maxDate', veryMaxDate);
 
-    const minDate = moment.utc(tickersInfo[ticker].minDate * 1000);
-    const maxDate = moment.utc(tickersInfo[ticker].maxDate * 1000);
+    const localeSecondDiff = new Date().getTimezoneOffset() * 60;
+    const minDate = moment.utc((tickersInfo[ticker].minDate + localeSecondDiff) * 1000);
+    const maxDate = moment.utc((tickersInfo[ticker].maxDate + localeSecondDiff) * 1000);
     $('#datetimepicker1').datetimepicker('minDate', minDate);
     $('#datetimepicker1').datetimepicker('maxDate', maxDate);
 }
@@ -314,7 +315,9 @@ socket.onmessage = function (e) {
                 priceFormat: tickersInfo[ticker],
             });
 
-            updateDatetimepickerRange(ticker);
+            if (response.action === 'switch') {
+                updateDatetimepickerRange(ticker);
+            }
             break;
     }
     updateSeriesScale(candleSeries1, candleSeries2);

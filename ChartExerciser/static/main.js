@@ -4,12 +4,13 @@ let tickersInfo = {};
 let fetchedBars = [];
 
 
-const chartWidth = Math.floor(document.body.clientWidth * 0.9 / 2);
+const chartWidth = Math.floor(document.body.clientWidth * 0.95 / 2);
+const chartHeight = Math.floor(chartWidth * 0.8);
 //TODO: resize-able
 
 let chartAttributes = {
     width: chartWidth,
-    height: 500,
+    height: chartHeight,
     priceScale: {
         position: 'left',
         scaleMargins: {
@@ -133,9 +134,20 @@ function getCurrentChartTime() {
     return null;
 }
 
-//TODO: fit to a chart
-function updateSeriesScale(series1, series2) {
-    const barsInfo = series2.barsInLogicalRange(chart2.timeScale().getVisibleLogicalRange());
+
+let specifiedDominantSeries = undefined;
+
+function updateSeriesScale(series1, series2, dominantSeries) {
+    let series;
+    if (dominantSeries === undefined) {
+        series = (specifiedDominantSeries === undefined ? series2 : specifiedDominantSeries);
+    } else {
+        series = dominantSeries;
+        specifiedDominantSeries = dominantSeries;
+    }
+    const chart = (series === series1 ? chart1 : chart2);
+
+    const barsInfo = series.barsInLogicalRange(chart.timeScale().getVisibleLogicalRange());
     const filteredData = fetchedBars.filter(e => barsInfo.from <= e.time && e.time <= barsInfo.to);
 
     const minPrice = d3.min(filteredData, e => e.low);
@@ -147,8 +159,8 @@ function updateSeriesScale(series1, series2) {
                 maxValue: maxPrice,
             },
             margins: {
-                above: 10,
-                below: 10,
+                above: 5,
+                below: 5,
             },
         }),
     };
@@ -243,6 +255,16 @@ function copyTextToClipboard(text) {
     document.body.removeChild(textArea);
 }
 
+function registerFitButtonsHandler() {
+    document.getElementById('fit-chart1-button').onclick = () => {
+        updateSeriesScale(candleSeries1, candleSeries2, candleSeries1);
+    }
+    document.getElementById('fit-chart2-button').onclick = () => {
+        updateSeriesScale(candleSeries1, candleSeries2, candleSeries2);
+    }
+}
+
+
 function updateDatetimepickerCurrentDatetime(timestamp) {
     if (typeof timestamp === 'number') {
         $('#datetimepicker1').datetimepicker('date', moment.utc(timestamp * 1000));
@@ -271,6 +293,7 @@ socket.onopen = function (e) {
     registerChangeTickerHandler();
     registerCopyDatetimeHandler();
     registerKeyboardHandler();
+    registerFitButtonsHandler();
 
     sendInitAction();
     sendSwitchAction('MES');

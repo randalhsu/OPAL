@@ -359,7 +359,13 @@ function sendGotoAction(timestamp) {
 function registerKeyboardHandler() {
     window.addEventListener('keydown', function (event) {
         console.log(`KeyboardEvent: code='${event.code}'`);
-        if (event.code === 'Space') {
+        if (event.code === 'Space' || event.code === 'ArrowRight') {
+            const currentTicker = document.getElementById('current-ticker').innerText;
+            const maxDate = tickersInfo[currentTicker].maxDate;
+            if (maxDate == getCurrentChartTime()) {
+                showMessage('Already reached final bar!', 2000);
+                return;
+            }
             sendStepAction();
         }
     }, true);

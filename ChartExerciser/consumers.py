@@ -173,32 +173,42 @@ class PriceConsumer(WebsocketConsumer):
             result.append(frame)
         return result
 
-    def generate_response(self, text_data: str) -> str:
-        message = json.loads(text_data)
-        action = message.get('action')
-        print('action:', action)
+    def generate_response(self, text_data: str) -> dict:
+        try:
+            message = json.loads(text_data)
+            action = message.get('action')
+            if not isinstance(action, str):
+                raise ValueError
+        except:
+            return {'error': 'invalid action'}
+
+        response = {
+            'action': action,
+        }
+
         if action == 'init':
-            response = {
-                'action': action,
+            response.update({
                 'data': TICKERS_INFO,
-            }
-            return json.dumps(response)
+            })
+            return response
+
         elif action == 'step':
             self.step_chart_time()
-            response = {
-                'action': action,
+            response.update({
                 'data': self.get_sliced_price_data(n_bars=1),
-            }
-            return json.dumps(response)
+            })
+            return response
+
         elif action == 'stepback':
             timestamp = message.get('timestamp')
             if self.set_chart_timestamp(timestamp):
-                response = {
-                    'action': action,
-                    'data': [],
-                }
-                return json.dumps(response)
-            return json.dumps({'error': 'invalid timestamp'})
+                return response
+
+            response.update({
+                'error': 'invalid timestamp',
+            })
+            return response
+
         elif action == 'switch':
             ticker = message.get('ticker')
             if self.set_ticker(ticker):
@@ -207,32 +217,42 @@ class PriceConsumer(WebsocketConsumer):
                 if not (start_time <= self.get_chart_time() <= end_time):
                     self.jump_to_random_time()
 
-                response = {
-                    'action': action,
+                response.update({
                     'ticker': self.ticker,
                     'data': self.get_sliced_price_data(),
-                }
-                return json.dumps(response)
-            return json.dumps({'error': 'unknown ticker'})
+                })
+                return response
+
+            response.update({
+                'error': 'unknown ticker',
+            })
+            return response
+
         elif action == 'goto':
             timestamp = message.get('timestamp')
             if self.set_chart_timestamp(timestamp):
-                response = {
-                    'action': action,
+                response.update({
                     'ticker': self.ticker,
                     'data': self.get_sliced_price_data(),
-                }
-                return json.dumps(response)
-            return json.dumps({'error': 'invalid timestamp'})
+                })
+                return response
 
-        return json.dumps({'error': 'unknown action'})
+            response.update({
+                'error': 'invalid timestamp',
+            })
+            return response
+
+        # Should not fall to here
+        response.update({
+            'error': 'unknown action',
+        })
+        return response
 
     def receive(self, text_data=None, bytes_data=None) -> None:
         print('-> receive()', text_data)
         try:
             response = self.generate_response(text_data)
-            # print('response:', response[:100])
-            self.send(text_data=response)
+            self.send(text_data=json.dumps(response))
         except:
             # print('Unexpected error:', sys.exc_info()[0])
             raise

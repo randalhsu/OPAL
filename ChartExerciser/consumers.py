@@ -97,8 +97,12 @@ class PriceConsumer(WebsocketConsumer):
     def disconnect(self, close_code) -> None:
         print('bye')
 
-    def set_chart_time(self, time: datetime.datetime) -> None:
-        self.now = time
+    def set_chart_time(self, time: datetime.datetime) -> bool:
+        start_time, end_time = get_time_range_of_dataframe(self.df)
+        if start_time <= time <= end_time:
+            self.now = time
+            return True
+        return False
 
     def get_chart_time(self) -> datetime.datetime:
         return self.now
@@ -144,7 +148,10 @@ class PriceConsumer(WebsocketConsumer):
             # Default return two days' 5-min bars
             n_bars = int(2 * 23 * 60 / 5)
 
-        end_index = self.df.index.get_loc(end_time, method='backfill') + 1
+        try:
+            end_index = self.df.index.get_loc(end_time, method='backfill') + 1
+        except KeyError:
+            return []
         start_index = max(0, end_index - n_bars)
         df = self.df[start_index:end_index]
 
@@ -197,14 +204,14 @@ class PriceConsumer(WebsocketConsumer):
             timestamp = message.get('timestamp')
             if isinstance(timestamp, int) and timestamp > 0:
                 time = datetime.datetime.utcfromtimestamp(timestamp)
-                self.set_chart_time(time)
-                response = {
-                    'action': action,
-                    'ticker': self.ticker,
-                    'data': self.get_sliced_price_data(),
-                }
-                return json.dumps(response)
-            return json.dumps({'error': 'unknown timestamp'})
+                if self.set_chart_time(time):
+                    response = {
+                        'action': action,
+                        'ticker': self.ticker,
+                        'data': self.get_sliced_price_data(),
+                    }
+                    return json.dumps(response)
+            return json.dumps({'error': 'invalid timestamp'})
 
         return json.dumps({'error': 'unknown action'})
 

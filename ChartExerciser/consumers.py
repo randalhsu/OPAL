@@ -6,6 +6,9 @@ from channels.generic.websocket import WebsocketConsumer
 import pandas as pd
 
 
+EPOCH = datetime.datetime.utcfromtimestamp(0)
+
+
 def resample(df: pd.DataFrame, resampled_timeframe_in_minutes: int) -> pd.DataFrame:
     RESAMPLE_MAP = {
         'open': 'first',
@@ -54,7 +57,6 @@ def load_tickers_info():
     with open('static/PriceData/tickers_info.json') as f:
         data = json.load(f)
 
-    EPOCH = datetime.datetime.utcfromtimestamp(0)
     for ticker, info in data.items():
         if ticker in PRICE_DATA:
             df = PRICE_DATA[ticker]
@@ -123,7 +125,6 @@ class PriceConsumer(WebsocketConsumer):
         return time
 
     def get_random_time(self, start_time: datetime.datetime, end_time: datetime.datetime) -> datetime.datetime:
-        EPOCH = datetime.datetime.utcfromtimestamp(0)
         MARGIN = datetime.timedelta(days=1)
         FIVE_MINUTES_IN_SECONDS = 60 * 5
         start_timestamp = (start_time + MARGIN - EPOCH).total_seconds()

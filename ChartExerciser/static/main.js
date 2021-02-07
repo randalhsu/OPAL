@@ -169,9 +169,6 @@ function updateSeriesScale(series1, series2, dominantSeries) {
 }
 
 function drawDailyOpenPrice(series1, series2) {
-    if (fetchedBars.length === 0) {
-        return;
-    }
     const localeHourDiff = new Date().getTimezoneOffset() / 60;
     for (let i = fetchedBars.length - 1; i >= 0; --i) {
         const date = new Date(fetchedBars[i].time * 1000);
@@ -266,6 +263,7 @@ function registerFitButtonsHandler() {
 
 
 function updateDatetimepickerCurrentDatetime(timestamp) {
+    //TODO: locale bug when near final bar
     if (typeof timestamp === 'number') {
         $('#datetimepicker1').datetimepicker('date', moment.utc(timestamp * 1000));
     }
@@ -292,7 +290,7 @@ const socket = new WebSocket(`ws://${window.location.host}/socket`);
 socket.onopen = function (e) {
     registerChangeTickerHandler();
     registerCopyDatetimeHandler();
-    registerKeyboardHandler();
+    registerKeyboardEventHandler();
     registerFitButtonsHandler();
 
     sendInitAction();
@@ -392,7 +390,7 @@ function sendGotoAction(timestamp) {
 }
 
 
-function registerKeyboardHandler() {
+function registerKeyboardEventHandler() {
     window.addEventListener('keydown', function (event) {
         console.log(`KeyboardEvent: code='${event.code}'`);
         switch (event.code) {

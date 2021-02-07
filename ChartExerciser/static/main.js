@@ -46,48 +46,51 @@ let chartAttributes = {
 const chart1 = LightweightCharts.createChart(document.getElementById('chart1'), chartAttributes);
 chartAttributes.priceScale.position = 'right';
 const chart2 = LightweightCharts.createChart(document.getElementById('chart2'), chartAttributes);
-//TODO: clear all crosshair when mouse left chart
+
 let mouseOverChart1 = false;
 let mouseOverChart2 = false;
 
 function crosshair1SyncHandler(e) {
-    if (e.time !== undefined) {
-        mouseOverChart1 = true;
-        let xx = chart2.timeScale().timeToCoordinate(e.time);
-        if (xx === null) {
-            xx = chart2.timeScale().timeToCoordinate(e.time - (e.time % 3600));
+    if (e.point === undefined) {
+        // triggered by mouse leave event
+        if (mouseOverChart1) {
+            mouseOverChart1 = false;
+            chart2.clearCrossHair();
         }
-        const price = chart1.getCrossHairPrice();
+    } else {
+        mouseOverChart1 = true;
+        let xx = 0;
+        if (e.time !== undefined) {
+            xx = chart2.timeScale().timeToCoordinate(e.time);
+            if (xx === null) {
+                xx = chart2.timeScale().timeToCoordinate(e.time - (e.time % 3600));
+            }
+        }
+        const price = candleSeries1.coordinateToPrice(e.point.y);
         const yy = candleSeries2.priceToCoordinate(price);
         chart2.setCrossHairXY(xx, yy, true);
-    } else if (e.point !== undefined) {
-        mouseOverChart1 = true;
-        const price = chart1.getCrossHairPrice();
-        const yy = candleSeries2.priceToCoordinate(price);
-        chart2.setCrossHairXY(0, yy, true);
-    } else if (mouseOverChart2) {
-        mouseOverChart2 = false;
-        chart2.clearCrossHair();
     }
 }
+
 function crosshair2SyncHandler(e) {
-    if (e.time !== undefined) {
-        mouseOverChart2 = true;
-        let xx = chart1.timeScale().timeToCoordinate(e.time);
-        if (xx === null) {
-            xx = chart1.timeScale().timeToCoordinate(e.time - (e.time % 3600));
+    if (e.point === undefined) {
+        // triggered by mouse leave event
+        if (mouseOverChart2) {
+            mouseOverChart2 = false;
+            chart1.clearCrossHair();
         }
-        const price = chart2.getCrossHairPrice();
+    } else {
+        mouseOverChart2 = true;
+        let xx = 0;
+        if (e.time !== undefined) {
+            xx = chart1.timeScale().timeToCoordinate(e.time);
+            if (xx === null) {
+                xx = chart1.timeScale().timeToCoordinate(e.time - (e.time % 3600));
+            }
+        }
+        const price = candleSeries2.coordinateToPrice(e.point.y);
         const yy = candleSeries1.priceToCoordinate(price);
         chart1.setCrossHairXY(xx, yy, true);
-    } else if (e.point !== undefined) {
-        mouseOverChart2 = true;
-        const price = chart2.getCrossHairPrice();
-        const yy = candleSeries1.priceToCoordinate(price);
-        chart1.setCrossHairXY(e.point.x, yy, true);
-    } else if (mouseOverChart1) {
-        mouseOverChart1 = false;
-        chart1.clearCrossHair();
     }
 }
 

@@ -8,7 +8,7 @@ const chartWidth = Math.floor(document.body.clientWidth * 0.95 / 2);
 const chartHeight = Math.floor(chartWidth * 0.8);
 //TODO: resize-able
 
-let chartAttributes = {
+let chartOptions = {
     width: chartWidth,
     height: chartHeight,
     priceScale: {
@@ -37,15 +37,18 @@ let chartAttributes = {
         mode: LightweightCharts.CrosshairMode.Normal,
     },
     timeScale: {
+        rightOffset: 2,
+        lockVisibleTimeRangeOnResize: true,
+        rightBarStaysOnScroll: true,
         borderColor: 'rgba(197, 203, 206, 0.8)',
         timeVisible: true,
         secondsVisible: false,
     },
 };
 
-const chart1 = LightweightCharts.createChart(document.getElementById('chart1'), chartAttributes);
-chartAttributes.priceScale.position = 'right';
-const chart2 = LightweightCharts.createChart(document.getElementById('chart2'), chartAttributes);
+const chart1 = LightweightCharts.createChart(document.getElementById('chart1'), chartOptions);
+chartOptions.priceScale.position = 'right';
+const chart2 = LightweightCharts.createChart(document.getElementById('chart2'), chartOptions);
 
 let mouseOverChart1 = false;
 let mouseOverChart2 = false;
@@ -98,7 +101,7 @@ chart1.subscribeCrosshairMove(crosshair1SyncHandler);
 chart2.subscribeCrosshairMove(crosshair2SyncHandler);
 
 
-const candleAttributes = {
+const candleOptions = {
     priceLineVisible: false,
     upColor: 'rgba(255, 255, 255, 1)',
     downColor: 'rgba(37, 41, 48, 1)',
@@ -108,8 +111,8 @@ const candleAttributes = {
     wickUpColor: 'rgba(126, 131, 140, 1)',
 };
 
-const candleSeries1 = chart1.addCandlestickSeries(candleAttributes);
-const candleSeries2 = chart2.addCandlestickSeries(candleAttributes);
+const candleSeries1 = chart1.addCandlestickSeries(candleOptions);
+const candleSeries2 = chart2.addCandlestickSeries(candleOptions);
 
 
 function resampleToHourlyBars(data) {
@@ -155,7 +158,7 @@ function updateSeriesScale(series1, series2, dominantSeries) {
 
     const minPrice = d3.min(filteredData, e => e.low);
     const maxPrice = d3.max(filteredData, e => e.high);
-    const attributes = {
+    const options = {
         autoscaleInfoProvider: () => ({
             priceRange: {
                 minValue: minPrice,
@@ -167,8 +170,8 @@ function updateSeriesScale(series1, series2, dominantSeries) {
             },
         }),
     };
-    series1.applyOptions(attributes);
-    series2.applyOptions(attributes);
+    series1.applyOptions(options);
+    series2.applyOptions(options);
 }
 
 function drawDailyOpenPrice(series1, series2) {

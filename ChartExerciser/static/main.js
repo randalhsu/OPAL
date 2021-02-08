@@ -50,6 +50,18 @@ const chart1 = LightweightCharts.createChart(document.getElementById('chart1'), 
 chartOptions.priceScale.position = 'right';
 const chart2 = LightweightCharts.createChart(document.getElementById('chart2'), chartOptions);
 
+function resetChart1TimeScale() {
+    const time = getCurrentChartTime();
+    const coordinate = chart1.timeScale().timeToCoordinate(time - time % 3600);
+    const logical = chart1.timeScale().coordinateToLogical(coordinate);
+    // Show two days' data with 2-bar margin left and right
+    const range = {
+        from: logical - (2 * 23 + 2),
+        to: logical + 2,
+    };
+    chart1.timeScale().setVisibleLogicalRange(range);
+}
+
 let mouseOverChart1 = false;
 let mouseOverChart2 = false;
 
@@ -143,13 +155,12 @@ function getCurrentChartTime() {
 
 let specifiedDominantSeries = undefined;
 
-function updateSeriesScale(series1, series2, dominantSeries) {
+function updateSeriesPriceScales(series1, series2, dominantSeries) {
     let series;
     if (dominantSeries === undefined) {
         series = (specifiedDominantSeries === undefined ? series1 : specifiedDominantSeries);
     } else {
-        series = dominantSeries;
-        specifiedDominantSeries = dominantSeries;
+        series = specifiedDominantSeries = dominantSeries;
     }
     const chart = (series === series1 ? chart1 : chart2);
     const oneBarTimeMarginInSeconds = (series === series1 ? 3600 : 300);
@@ -182,25 +193,40 @@ function setPriceScalesAutoScale() {
     chart2.priceScale('right').applyOptions({ autoScale: true });
 }
 
-function resetAllScales() {
-    chart1.timeScale().resetTimeScale();
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fullUpdateSeriesPriceScales(series1, series2, dominantSeries) {
+    // run updateSeriesScale() just once may not be enough, since new price range forms
+    for (let i = 0; i < 3; ++i) {
+        updateSeriesPriceScales(series1, series2, dominantSeries);
+        await sleep(50);
+    }
+}
+
+async function resetAllScales() {
+    resetChart1TimeScale();
     chart2.timeScale().resetTimeScale();
     setPriceScalesAutoScale();
     specifiedDominantSeries = undefined;
-    updateSeriesScale(candleSeries1, candleSeries2);
+    fullUpdateSeriesPriceScales(candleSeries1, candleSeries2);
 }
 
 function registerFitButtonsHandler() {
-    document.getElementById('fit-chart1-button').onclick = () => {
-        updateSeriesScale(candleSeries1, candleSeries2, candleSeries1);
+    document.getElementById('fit-chart1-button').onclick = (event) => {
+        fullUpdateSeriesPriceScales(candleSeries1, candleSeries2, candleSeries1);
         setPriceScalesAutoScale();
+        event.target.blur();
     }
-    document.getElementById('fit-chart2-button').onclick = () => {
-        updateSeriesScale(candleSeries1, candleSeries2, candleSeries2);
+    document.getElementById('fit-chart2-button').onclick = (event) => {
+        fullUpdateSeriesPriceScales(candleSeries1, candleSeries2, candleSeries2);
         setPriceScalesAutoScale();
+        event.target.blur();
     }
-    document.getElementById('reset-scales-button').onclick = () => {
+    document.getElementById('reset-scales-button').onclick = (event) => {
         resetAllScales();
+        event.target.blur();
     }
 }
 
@@ -369,10 +395,11 @@ socket.onmessage = function (e) {
 
             if (response.action === 'switch') {
                 updateDatetimepickerRange(ticker);
+                resetChart1TimeScale();
             }
             break;
     }
-    updateSeriesScale(candleSeries1, candleSeries2);
+    updateSeriesPriceScales(candleSeries1, candleSeries2);
     drawDailyOpenPrice(candleSeries1, candleSeries2);
     updateDatetimepickerCurrentDatetime(getCurrentChartTime());
 }

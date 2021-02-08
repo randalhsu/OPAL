@@ -146,7 +146,7 @@ let specifiedDominantSeries = undefined;
 function updateSeriesScale(series1, series2, dominantSeries) {
     let series;
     if (dominantSeries === undefined) {
-        series = (specifiedDominantSeries === undefined ? series2 : specifiedDominantSeries);
+        series = (specifiedDominantSeries === undefined ? series1 : specifiedDominantSeries);
     } else {
         series = dominantSeries;
         specifiedDominantSeries = dominantSeries;
@@ -173,6 +173,34 @@ function updateSeriesScale(series1, series2, dominantSeries) {
     series1.applyOptions(options);
     series2.applyOptions(options);
 }
+
+function setPriceScalesAutoScale() {
+    chart1.priceScale('left').applyOptions({ autoScale: true });
+    chart2.priceScale('right').applyOptions({ autoScale: true });
+}
+
+function resetAllScales() {
+    chart1.timeScale().resetTimeScale();
+    chart2.timeScale().resetTimeScale();
+    setPriceScalesAutoScale();
+    specifiedDominantSeries = undefined;
+    updateSeriesScale(candleSeries1, candleSeries2);
+}
+
+function registerFitButtonsHandler() {
+    document.getElementById('fit-chart1-button').onclick = () => {
+        updateSeriesScale(candleSeries1, candleSeries2, candleSeries1);
+        setPriceScalesAutoScale();
+    }
+    document.getElementById('fit-chart2-button').onclick = () => {
+        updateSeriesScale(candleSeries1, candleSeries2, candleSeries2);
+        setPriceScalesAutoScale();
+    }
+    document.getElementById('reset-scales-button').onclick = () => {
+        resetAllScales();
+    }
+}
+
 
 function drawDailyOpenPrice(series1, series2) {
     const localeHourDiff = new Date().getTimezoneOffset() / 60;
@@ -257,16 +285,6 @@ function copyTextToClipboard(text) {
     showMessage(message, 1500);
     document.body.removeChild(textArea);
 }
-
-function registerFitButtonsHandler() {
-    document.getElementById('fit-chart1-button').onclick = () => {
-        updateSeriesScale(candleSeries1, candleSeries2, candleSeries1);
-    }
-    document.getElementById('fit-chart2-button').onclick = () => {
-        updateSeriesScale(candleSeries1, candleSeries2, candleSeries2);
-    }
-}
-
 
 function updateDatetimepickerCurrentDatetime(timestamp) {
     //TODO: locale bug when near final bar

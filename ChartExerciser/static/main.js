@@ -1,4 +1,4 @@
-const DATETIME_FORMAT = 'YYYY/MM/DD HH:mm';
+const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm';
 
 let tickersInfo = {};
 let fetchedBars = [];
@@ -19,7 +19,7 @@ let chartOptions = {
         },
     },
     localization: {
-        dateFormat: 'yyyy/MM/dd',
+        dateFormat: 'yyyy-MM-dd',
     },
     layout: {
         backgroundColor: '#000000',
@@ -448,10 +448,82 @@ function registerKeyboardEventHandler() {
     }, true);
 }
 
+function setChartMenuVisibility(visibility) {
+    const menu = document.getElementById('chart-menu');
+    const classList = menu.classList;
+    if (visibility === true) {
+        classList.remove('d-none');
+    } else if (visibility === false) {
+        classList.add('d-none');
+    }
+}
+
+function getAbsoluteOffset(el) {
+    let top = 0, left = 0;
+    do {
+        top += el.offsetTop || 0;
+        left += el.offsetLeft || 0;
+        el = el.offsetParent;
+    } while (el);
+
+    return {
+        top: top,
+        left: left,
+    };
+};
+
+function getOffset(el) {
+    const rect = el.getBoundingClientRect();
+    return {
+        left: rect.left + window.scrollX,
+        top: rect.top + window.scrollY,
+    };
+}
+
+function registerChartMouseClickHandler(chart, chartElementId) {
+    const menu = document.getElementById('chart-menu');
+    const container = document.getElementById(chartElementId);
+    const leftPriceScale = container.getElementsByTagName('td')[0];
+
+    function handleClick(param) {
+        if (!param.point) {
+            return;
+        }
+        const rect = leftPriceScale.getBoundingClientRect();
+        const offsetX = rect.right;
+        const offsetY = rect.top;
+        //console.log($(container).offset());
+        const chartOffset = getAbsoluteOffset(container);
+        menu.style.left = `${offsetX + param.point.x}px`;
+        menu.style.top = `${offsetY + param.point.y}px`;
+        console.log(chartOffset, `click ${param.seriesPrices} (${param.point.x}, ${param.point.y}) point, time ${param.time}`);
+    }
+    chart.subscribeClick(handleClick);
+}
+/*
+function registerChartMouseEventHandler() {
+    //registerChartMouseEventHandler(chart1, document.getElementById('chart1'));
+    const menu = document.getElementById('chart-menu');
+    const container = document.getElementById('chart2')
+    function handleClick(param) {
+        console.log(param);
+        if (!param.point) {
+            return;
+        }
+        const chartOffset = getOffset(container);
+        console.log(chartOffset);
+        menu.style.left = `${chartOffset.left + param.point.x}px`;
+        menu.style.top = `${chartOffset.top + param.point.y}px`;
+        console.log(param.seriesPrices);
+        console.log(`click ${param.seriesPrices} (${param.point.x}, ${param.point.y}) point, time ${param.time}`);
+    }
+    chart2.subscribeClick(handleClick);
+}
+*/
 function initDatetimepicker() {
     $('#datetimepicker1').datetimepicker({
         format: DATETIME_FORMAT,
-        dayViewHeaderFormat: 'YYYY/MM',
+        dayViewHeaderFormat: 'YYYY-MM',
         stepping: 5,
         sideBySide: true,
         useCurrent: false,

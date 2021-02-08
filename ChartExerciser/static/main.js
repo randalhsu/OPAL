@@ -315,6 +315,7 @@ function updateDatetimepickerRange(ticker) {
 const socket = new WebSocket(`ws://${window.location.host}/socket`);
 
 socket.onopen = function (e) {
+    initDatetimepicker();
     registerChangeTickerHandler();
     registerCopyDatetimeHandler();
     registerKeyboardEventHandler();
@@ -447,7 +448,7 @@ function registerKeyboardEventHandler() {
     }, true);
 }
 
-window.onload = function () {
+function initDatetimepicker() {
     $('#datetimepicker1').datetimepicker({
         format: DATETIME_FORMAT,
         dayViewHeaderFormat: 'YYYY/MM',

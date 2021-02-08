@@ -152,9 +152,12 @@ function updateSeriesScale(series1, series2, dominantSeries) {
         specifiedDominantSeries = dominantSeries;
     }
     const chart = (series === series1 ? chart1 : chart2);
+    const oneBarTimeMarginInSeconds = (series === series1 ? 3600 : 300);
 
     const barsInfo = series.barsInLogicalRange(chart.timeScale().getVisibleLogicalRange());
-    const filteredData = fetchedBars.filter(e => barsInfo.from <= e.time && e.time <= barsInfo.to);
+    const filteredData = fetchedBars.filter(
+        e => barsInfo.from <= e.time && e.time <= barsInfo.to + oneBarTimeMarginInSeconds * 1000
+    );
 
     const minPrice = d3.min(filteredData, e => e.low);
     const maxPrice = d3.max(filteredData, e => e.high);

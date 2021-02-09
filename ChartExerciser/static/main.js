@@ -493,6 +493,31 @@ function updateDatetimepickerRange(ticker) {
 }
 
 
+const fastForwardStatus = {
+    isFastForwarding: false,
+    fastForwardedBars: 0,
+    N_BARS: 24,
+}
+
+function checkIfContinueFastForwardJourney(lastBarTriggeredAlert) {
+    if (lastBarTriggeredAlert) {
+        fastForwardStatus.isFastForwarding = false;
+        fastForwardStatus.fastForwardedBars = 0;
+        return;
+    }
+    if (!fastForwardStatus.isFastForwarding) {
+        return;
+    }
+    fastForwardStatus.fastForwardedBars += 1;
+    if (fastForwardStatus.fastForwardedBars >= fastForwardStatus.N_BARS) {
+        fastForwardStatus.isFastForwarding = false;
+        fastForwardStatus.fastForwardedBars = 0;
+        return;
+    }
+    sendStepAction();
+}
+
+
 const socket = new WebSocket(`ws://${window.location.host}/socket`);
 
 socket.onopen = function (e) {
@@ -530,7 +555,8 @@ socket.onmessage = function (e) {
             candleSeries1.setData(hourlyBars);
             candleSeries2.update(bar);
 
-            checkIfAlertTriggered();
+            const lastBarTriggeredAlert = checkIfAlertTriggered();
+            checkIfContinueFastForwardJourney(lastBarTriggeredAlert);
             break;
 
         case 'stepback':
@@ -622,6 +648,13 @@ function registerKeyboardEventHandler() {
                 if (event.code === 'Space' && event.target === document.body) {
                     event.preventDefault();
                 }
+                break;
+
+            case 'KeyF':
+                // Fast forward until triggered any alert, or at most N_BARS,
+                // whichever happens first
+                fastForwardStatus.isFastForwarding = true;
+                sendStepAction();
                 break;
 
             case 'ArrowLeft':

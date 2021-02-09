@@ -1,3 +1,5 @@
+'use strict';
+
 const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm';
 
 let tickersInfo = {};
@@ -64,6 +66,7 @@ function resetChart1TimeScale() {
 
 let mouseOverChart1 = false;
 let mouseOverChart2 = false;
+let mouseHoverPriceString = null;
 
 function crosshair1SyncHandler(e) {
     if (e.point === undefined) {
@@ -71,6 +74,7 @@ function crosshair1SyncHandler(e) {
         if (mouseOverChart1) {
             mouseOverChart1 = false;
             chart2.clearCrossHair();
+            mouseHoverPriceString = null;
         }
     } else {
         mouseOverChart1 = true;
@@ -84,6 +88,7 @@ function crosshair1SyncHandler(e) {
         const price = candleSeries1.coordinateToPrice(e.point.y);
         const yy = candleSeries2.priceToCoordinate(price);
         chart2.setCrossHairXY(xx, yy, true);
+        mouseHoverPriceString = chart1.priceScale('left').formatPrice(price);
     }
 }
 
@@ -93,6 +98,7 @@ function crosshair2SyncHandler(e) {
         if (mouseOverChart2) {
             mouseOverChart2 = false;
             chart1.clearCrossHair();
+            mouseHoverPriceString = null;
         }
     } else {
         mouseOverChart2 = true;
@@ -106,6 +112,7 @@ function crosshair2SyncHandler(e) {
         const price = candleSeries2.coordinateToPrice(e.point.y);
         const yy = candleSeries1.priceToCoordinate(price);
         chart1.setCrossHairXY(xx, yy, true);
+        mouseHoverPriceString = chart2.priceScale('right').formatPrice(price);
     }
 }
 
@@ -260,6 +267,85 @@ function attachDailyOpenPriceLineToSeries(series, price) {
     });
 }
 
+let alertPriceStrings = [];
+
+function attachAlertPriceLinesToSeries(series) {
+    if (series.alertPriceLines === undefined) {
+        series.alertPriceLines = [];
+    }
+    const alreadyAttachedAlertPriceStrings = [...series.alertPriceLines.map(priceLine => priceLine.priceString)];
+    for (const priceString of alertPriceStrings) {
+        if (alreadyAttachedAlertPriceStrings.includes(priceString)) {
+            continue;
+        }
+        const alertPriceLine = series.createPriceLine({
+            price: +priceString,
+            color: 'rgba(0, 86, 179, 1)',
+            lineWidth: 2,
+            lineStyle: LightweightCharts.LineStyle.Dotted,
+        });
+        alertPriceLine.priceString = priceString;
+        series.alertPriceLines.push(alertPriceLine);
+    }
+}
+
+function addAlertPriceString(priceString) {
+    if (priceString === null) {
+        return;
+    }
+    if (alertPriceStrings.includes(priceString)) {
+        showMessage(`Alert @ ${priceString} already exists!`, 1500);
+        return;
+    }
+    alertPriceStrings.push(priceString);
+    alertPriceStrings.sort().reverse();
+    attachAlertPriceLinesToSeries(candleSeries1);
+    attachAlertPriceLinesToSeries(candleSeries2);
+    updateAlertPricesTable();
+    showMessage(`Set alert @ ${priceString}`, 1500);
+}
+
+function removeAlertPriceString(priceString) {
+    for (const series of [candleSeries1, candleSeries2]) {
+        for (const priceLine of series.alertPriceLines) {
+            if (priceLine.priceString === priceString) {
+                series.removePriceLine(priceLine);
+                break;
+            }
+        }
+    }
+    updateAlertPricesTable();
+    showMessage(`Removed alert @ ${priceString}`, 1500);
+}
+
+function updateAlertPricesTable() {
+    const ul = document.getElementById('alert-prices-ul');
+    while (ul.firstChild) {
+        ul.removeChild(ul.firstChild);
+    }
+
+    const titleLi = document.createElement('li');
+    titleLi.setAttribute('class', 'list-group-item');
+    titleLi.innerHTML = '<i class="fa fa-bell" aria-hidden="true"></i>&nbsp;&nbsp;Alert Prices';
+    ul.appendChild(titleLi);
+
+    for (const priceString of alertPriceStrings) {
+        ul.appendChild(generateAlertTableLiElement(priceString));
+    }
+}
+
+function generateAlertTableLiElement(priceString) {
+    let li = document.createElement('li');
+    li.setAttribute('class', 'list-group-item list-group-item-primary');
+    li.innerHTML = `${priceString}<button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>`;
+    const button = li.getElementsByTagName('button')[0];
+    button.onclick = () => {
+        alertPriceStrings = alertPriceStrings.filter(s => s !== priceString);
+        removeAlertPriceString(priceString);
+    };
+    return li;
+}
+
 function showMessage(message, timeout = 0) {
     const el = document.getElementById('message');
     el.innerText = message;
@@ -344,6 +430,7 @@ socket.onopen = function (e) {
     registerCopyDatetimeHandler();
     registerKeyboardEventHandler();
     registerFitButtonsHandler();
+    updateAlertPricesTable();
 
     sendInitAction();
     sendSwitchAction('MES');
@@ -468,6 +555,10 @@ function registerKeyboardEventHandler() {
                 candleSeries1.setData(hourlyData);
                 candleSeries2.setData(fetchedBars);
                 sendStepbackAction(getCurrentChartTime());
+                break;
+
+            case 'KeyA':
+                addAlertPriceString(mouseHoverPriceString);
                 break;
         }
     }, true);

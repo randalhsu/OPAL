@@ -238,28 +238,26 @@ function drawDailyOpenPrice(series1, series2) {
         //TODO: DST may change hour?
         if ((date.getHours() + localeHourDiff + 24) % 24 === 18 && date.getMinutes() === 0) {
             const dailyOpenPrice = fetchedBars[i].open;
-            attachPriceLineToSeries(series1, dailyOpenPrice);
-            attachPriceLineToSeries(series2, dailyOpenPrice);
+            attachDailyOpenPriceLineToSeries(series1, dailyOpenPrice);
+            attachDailyOpenPriceLineToSeries(series2, dailyOpenPrice);
             return;
         }
     }
 }
 
-function attachPriceLineToSeries(series, price) {
-    if (series.priceLine !== undefined) {
-        if (price === series.priceLine.price) {
+function attachDailyOpenPriceLineToSeries(series, price) {
+    if (series.dailyOpenPriceLine !== undefined) {
+        if (price === series.dailyOpenPriceLine.options().price) {
             return;
         }
-        series.removePriceLine(series.priceLine);
+        series.removePriceLine(series.dailyOpenPriceLine);
     }
-    let priceLine = series.createPriceLine({
+    series.dailyOpenPriceLine = series.createPriceLine({
         price: price,
         color: 'rgba(207, 166, 0, 1)',
         lineWidth: 2,
         lineStyle: LightweightCharts.LineStyle.Solid,
     });
-    priceLine.price = price;
-    series.priceLine = priceLine;
 }
 
 function showMessage(message, timeout = 0) {

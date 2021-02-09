@@ -1,5 +1,6 @@
 'use strict';
 
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm';
 
 let tickersInfo = {};
@@ -289,6 +290,16 @@ function attachAlertPriceLinesToSeries(series) {
     }
 }
 
+function removeAllAlertPriceLinesFromSeries(series) {
+    if (series.alertPriceLines === undefined) {
+        return;
+    }
+    for (const priceLine of series.alertPriceLines) {
+        series.removePriceLine(priceLine);
+    }
+    series.alertPriceLines = [];
+}
+
 function addAlertPriceString(priceString) {
     if (priceString === null) {
         return;
@@ -306,16 +317,19 @@ function addAlertPriceString(priceString) {
 }
 
 function removeAlertPriceString(priceString) {
+    alertPriceStrings = alertPriceStrings.filter(s => s !== priceString);
     for (const series of [candleSeries1, candleSeries2]) {
         for (const priceLine of series.alertPriceLines) {
             if (priceLine.priceString === priceString) {
                 series.removePriceLine(priceLine);
+                series.alertPriceLines = series.alertPriceLines.filter(
+                    priceLine => priceLine.priceString !== priceString
+                );
                 break;
             }
         }
     }
     updateAlertPricesTable();
-    showMessage(`🔕 ${priceString}`, 1500);
 }
 
 function updateAlertPricesTable() {
@@ -326,25 +340,83 @@ function updateAlertPricesTable() {
 
     const titleLi = document.createElement('li');
     titleLi.setAttribute('class', 'list-group-item');
-    titleLi.innerHTML = '<i class="fa fa-bell" aria-hidden="true"></i>&nbsp;&nbsp;Alert Prices';
+    titleLi.innerHTML = `
+    <i class="fa fa-bell" aria-hidden="true"></i>
+    &nbsp;&nbsp;Alert Prices
+    <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    `;
+    titleLi.getElementsByTagName('button')[0].onclick = () => {
+        removeAllAlerts();
+    };
     ul.appendChild(titleLi);
 
-    for (const priceString of alertPriceStrings) {
-        ul.appendChild(generateAlertTableLiElement(priceString));
+    if (alertPriceStrings.length === 0) {
+        const li = document.createElement('li');
+        li.setAttribute('class', 'list-group-item');
+        li.innerHTML = '(Empty)';
+        ul.appendChild(li);
+    } else {
+        for (const priceString of alertPriceStrings) {
+            const li = document.createElement('li');
+            li.setAttribute('class', 'list-group-item list-group-item-primary');
+            li.innerHTML = `
+            ${priceString}
+            <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            `;
+            li.getElementsByTagName('button')[0].onclick = () => {
+                removeAlertPriceString(priceString);
+            };
+            ul.appendChild(li);
+        }
     }
 }
 
-function generateAlertTableLiElement(priceString) {
-    let li = document.createElement('li');
-    li.setAttribute('class', 'list-group-item list-group-item-primary');
-    li.innerHTML = `${priceString}<button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>`;
-    const button = li.getElementsByTagName('button')[0];
-    button.onclick = () => {
-        alertPriceStrings = alertPriceStrings.filter(s => s !== priceString);
-        removeAlertPriceString(priceString);
-    };
-    return li;
+function checkIfAlertTriggered() {
+    let isAlertTriggered = false;
+    if (fetchedBars.length > 0) {
+        const lastBar = fetchedBars[fetchedBars.length - 1];
+        let high = lastBar.high;
+        let low = lastBar.low;
+        if (fetchedBars.length >= 2) {
+            // handle gap
+            const secondLastBar = fetchedBars[fetchedBars.length - 2];
+            high = Math.max(lastBar.high, secondLastBar.high);
+            low = Math.min(lastBar.low, secondLastBar.low);
+        }
+
+        for (const priceString of alertPriceStrings) {
+            const price = +priceString;
+            if (low <= price && price <= high) {
+                showMessage(`🔔 ${priceString} triggered!`, 2000);
+                removeAlertPriceString(priceString);
+                isAlertTriggered = true;
+            }
+        }
+    }
+    if (isAlertTriggered) {
+        beep();
+    }
+    return isAlertTriggered;
 }
+
+function removeAllAlerts() {
+    alertPriceStrings = [];
+    removeAllAlertPriceLinesFromSeries(candleSeries1);
+    removeAllAlertPriceLinesFromSeries(candleSeries2);
+    updateAlertPricesTable();
+}
+
+function beep(frequency = 718, type = 'triangle', volume = 0.1, duration = 250) {
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    gainNode.gain.value = volume;
+    oscillator.frequency.value = frequency;
+    oscillator.type = type;
+    oscillator.start();
+    setTimeout(() => oscillator.stop(), duration);
+};
 
 function showMessage(message, timeout = 0) {
     const el = document.getElementById('message');
@@ -439,7 +511,7 @@ socket.onopen = function (e) {
 
 socket.onmessage = function (e) {
     const response = JSON.parse(e.data);
-    let hourlyData;
+    let hourlyBars;
     //console.log(response);
     switch (response.action) {
         case 'init':
@@ -454,9 +526,11 @@ socket.onmessage = function (e) {
                 return;
             }
             fetchedBars.push(bar);
-            hourlyData = resampleToHourlyBars(fetchedBars);
-            candleSeries1.setData(hourlyData);
+            hourlyBars = resampleToHourlyBars(fetchedBars);
+            candleSeries1.setData(hourlyBars);
             candleSeries2.update(bar);
+
+            checkIfAlertTriggered();
             break;
 
         case 'stepback':
@@ -465,12 +539,12 @@ socket.onmessage = function (e) {
 
         case 'switch':
         case 'goto':
-            const data = response.data;
+            const bars = response.data;
             const ticker = response.ticker;
-            hourlyData = resampleToHourlyBars(data);
-            candleSeries1.setData(hourlyData);
-            candleSeries2.setData(data);
-            fetchedBars = data;
+            hourlyBars = resampleToHourlyBars(bars);
+            candleSeries1.setData(hourlyBars);
+            candleSeries2.setData(bars);
+            fetchedBars = bars;
 
             candleSeries1.applyOptions({
                 priceFormat: tickersInfo[ticker],
@@ -478,6 +552,7 @@ socket.onmessage = function (e) {
             candleSeries2.applyOptions({
                 priceFormat: tickersInfo[ticker],
             });
+            removeAllAlerts();
 
             if (response.action === 'switch') {
                 updateDatetimepickerRange(ticker);
@@ -543,6 +618,10 @@ function registerKeyboardEventHandler() {
                     return;
                 }
                 sendStepAction();
+                // Prevent scrolling page with space key
+                if (event.code === 'Space' && event.target === document.body) {
+                    event.preventDefault();
+                }
                 break;
 
             case 'ArrowLeft':
@@ -551,8 +630,8 @@ function registerKeyboardEventHandler() {
                     return;
                 }
                 fetchedBars.pop();
-                hourlyData = resampleToHourlyBars(fetchedBars);
-                candleSeries1.setData(hourlyData);
+                const hourlyBars = resampleToHourlyBars(fetchedBars);
+                candleSeries1.setData(hourlyBars);
                 candleSeries2.setData(fetchedBars);
                 sendStepbackAction(getCurrentChartTime());
                 break;

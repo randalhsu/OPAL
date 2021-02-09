@@ -294,7 +294,7 @@ function addAlertPriceString(priceString) {
         return;
     }
     if (alertPriceStrings.includes(priceString)) {
-        showMessage(`Alert @ ${priceString} already exists!`, 1500);
+        showMessage(`🔔 ${priceString}`, 1500);
         return;
     }
     alertPriceStrings.push(priceString);
@@ -302,7 +302,7 @@ function addAlertPriceString(priceString) {
     attachAlertPriceLinesToSeries(candleSeries1);
     attachAlertPriceLinesToSeries(candleSeries2);
     updateAlertPricesTable();
-    showMessage(`Set alert @ ${priceString}`, 1500);
+    showMessage(`🔔 ${priceString}`, 1500);
 }
 
 function removeAlertPriceString(priceString) {
@@ -315,7 +315,7 @@ function removeAlertPriceString(priceString) {
         }
     }
     updateAlertPricesTable();
-    showMessage(`Removed alert @ ${priceString}`, 1500);
+    showMessage(`🔕 ${priceString}`, 1500);
 }
 
 function updateAlertPricesTable() {
@@ -416,7 +416,6 @@ function updateDatetimepickerRange(ticker) {
     const localeSecondDiff = new Date().getTimezoneOffset() * 60;
     const minDate = moment.utc((tickersInfo[ticker].minDate + localeSecondDiff) * 1000);
     const maxDate = moment.utc((tickersInfo[ticker].maxDate + localeSecondDiff) * 1000);
-    console.log('min', minDate, 'max', maxDate);
     $('#datetimepicker1').datetimepicker('minDate', minDate);
     $('#datetimepicker1').datetimepicker('maxDate', maxDate);
 }
@@ -429,6 +428,8 @@ socket.onopen = function (e) {
     registerChangeTickerHandler();
     registerCopyDatetimeHandler();
     registerKeyboardEventHandler();
+    registerChartMouseClickHandler(chart1, 'chart1');
+    registerChartMouseClickHandler(chart2, 'chart2');
     registerFitButtonsHandler();
     updateAlertPricesTable();
 
@@ -496,7 +497,6 @@ socket.onclose = function (e) {
 socket.onerror = function (e) {
     console.log('error bye');
 }
-//console.log(socket);
 
 function sendInitAction() {
     socket.send(JSON.stringify({ action: 'init' }));
@@ -574,28 +574,6 @@ function setChartMenuVisibility(visibility) {
     }
 }
 
-function getAbsoluteOffset(el) {
-    let top = 0, left = 0;
-    do {
-        top += el.offsetTop || 0;
-        left += el.offsetLeft || 0;
-        el = el.offsetParent;
-    } while (el);
-
-    return {
-        top: top,
-        left: left,
-    };
-};
-
-function getOffset(el) {
-    const rect = el.getBoundingClientRect();
-    return {
-        left: rect.left + window.scrollX,
-        top: rect.top + window.scrollY,
-    };
-}
-
 function registerChartMouseClickHandler(chart, chartElementId) {
     const menu = document.getElementById('chart-menu');
     const container = document.getElementById(chartElementId);
@@ -606,36 +584,15 @@ function registerChartMouseClickHandler(chart, chartElementId) {
             return;
         }
         const rect = leftPriceScale.getBoundingClientRect();
-        const offsetX = rect.right;
-        const offsetY = rect.top;
-        //console.log($(container).offset());
-        const chartOffset = getAbsoluteOffset(container);
+        const offsetX = window.scrollX + rect.right;
+        const offsetY = window.scrollY + rect.top;
         menu.style.left = `${offsetX + param.point.x}px`;
         menu.style.top = `${offsetY + param.point.y}px`;
-        console.log(chartOffset, `click ${param.seriesPrices} (${param.point.x}, ${param.point.y}) point, time ${param.time}`);
+        console.log(`click (${param.point.x}, ${param.point.y}) point, time ${param.time}`, param.seriesPrices);
     }
     chart.subscribeClick(handleClick);
 }
-/*
-function registerChartMouseEventHandler() {
-    //registerChartMouseEventHandler(chart1, document.getElementById('chart1'));
-    const menu = document.getElementById('chart-menu');
-    const container = document.getElementById('chart2')
-    function handleClick(param) {
-        console.log(param);
-        if (!param.point) {
-            return;
-        }
-        const chartOffset = getOffset(container);
-        console.log(chartOffset);
-        menu.style.left = `${chartOffset.left + param.point.x}px`;
-        menu.style.top = `${chartOffset.top + param.point.y}px`;
-        console.log(param.seriesPrices);
-        console.log(`click ${param.seriesPrices} (${param.point.x}, ${param.point.y}) point, time ${param.time}`);
-    }
-    chart2.subscribeClick(handleClick);
-}
-*/
+
 function initDatetimepicker() {
     $('#datetimepicker1').datetimepicker({
         format: DATETIME_FORMAT,

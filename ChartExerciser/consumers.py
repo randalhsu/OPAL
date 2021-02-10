@@ -2,6 +2,8 @@ import datetime
 import json
 from pathlib import Path
 import random
+import sys
+import zlib
 from channels.generic.websocket import WebsocketConsumer
 import pandas as pd
 
@@ -75,6 +77,7 @@ TICKERS_INFO = load_tickers_info()
 
 
 class PriceConsumer(WebsocketConsumer):
+    COMPRESSION_THRESHOLD_SIZE = 512
 
     def __init__(self, *args, **kwargs) -> None:
         self.ticker = ''
@@ -244,7 +247,14 @@ class PriceConsumer(WebsocketConsumer):
         print('-> receive()', text_data)
         try:
             response = self.generate_response(text_data)
-            self.send(text_data=json.dumps(response))
+            json_string = json.dumps(response, separators=(',', ':'))
+
+            if sys.getsizeof(json_string) > type(self).COMPRESSION_THRESHOLD_SIZE:
+                compressed_data = zlib.compress(json_string.encode('utf-8'))
+                # print('json:', sys.getsizeof(json_string), ' / zlib:', sys.getsizeof(compressed_data))
+                self.send(bytes_data=compressed_data)
+            else:
+                self.send(text_data=json_string)
         except:
             # print('Unexpected error:', sys.exc_info()[0])
             raise

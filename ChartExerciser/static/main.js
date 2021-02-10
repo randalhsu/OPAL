@@ -537,7 +537,24 @@ socket.onopen = function (e) {
 }
 
 socket.onmessage = function (e) {
-    const response = JSON.parse(e.data);
+    if (e.data instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const s = reader.result;
+            let data = new Array(s.length);
+            for (let i = 0; i < s.length; ++i) {
+                data[i] = s.charCodeAt(i);
+            }
+            const response = JSON.parse(pako.inflate(data, { to: 'string' }));
+            handleResponse(response);
+        };
+        reader.readAsBinaryString(e.data);
+    } else {
+        handleResponse(JSON.parse(e.data));
+    }
+}
+
+function handleResponse(response) {
     let hourlyBars;
     //console.log(response);
     switch (response.action) {

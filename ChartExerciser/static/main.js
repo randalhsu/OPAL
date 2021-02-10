@@ -373,15 +373,17 @@ function updateAlertPricesTable() {
 
 function checkIfAlertTriggered() {
     let isAlertTriggered = false;
-    if (fetchedBars.length > 0) {
+    if (fetchedBars.length >= 2) {
         const lastBar = fetchedBars[fetchedBars.length - 1];
+        const secondLastBar = fetchedBars[fetchedBars.length - 2];
         let high = lastBar.high;
         let low = lastBar.low;
-        if (fetchedBars.length >= 2) {
-            // handle gap
-            const secondLastBar = fetchedBars[fetchedBars.length - 2];
-            high = Math.max(lastBar.high, secondLastBar.high);
-            low = Math.min(lastBar.low, secondLastBar.low);
+        // handle gap
+        if (lastBar.low > secondLastBar.high) {
+            low = secondLastBar.high;
+        }
+        if (lastBar.high < secondLastBar.low) {
+            high = secondLastBar.low;
         }
 
         for (const priceString of alertPriceStrings) {

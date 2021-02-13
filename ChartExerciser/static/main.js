@@ -496,22 +496,25 @@ function updateDatetimepickerRange(ticker) {
 const fastForwardStatus = {
     isFastForwarding: false,
     fastForwardedBars: 0,
-    N_BARS: 24,
+    LIMIT_N_BARS: 24,
+}
+
+function resetFastForwardStatus() {
+    fastForwardStatus.isFastForwarding = false;
+    fastForwardStatus.fastForwardedBars = 0;
 }
 
 function checkIfContinueFastForwardJourney(lastBarTriggeredAlert) {
     if (lastBarTriggeredAlert) {
-        fastForwardStatus.isFastForwarding = false;
-        fastForwardStatus.fastForwardedBars = 0;
+        resetFastForwardStatus();
         return;
     }
     if (!fastForwardStatus.isFastForwarding) {
         return;
     }
     fastForwardStatus.fastForwardedBars += 1;
-    if (fastForwardStatus.fastForwardedBars >= fastForwardStatus.N_BARS) {
-        fastForwardStatus.isFastForwarding = false;
-        fastForwardStatus.fastForwardedBars = 0;
+    if (fastForwardStatus.fastForwardedBars >= fastForwardStatus.LIMIT_N_BARS) {
+        resetFastForwardStatus();
         return;
     }
     sendStepAction();
@@ -596,6 +599,7 @@ function handleResponse(response) {
                 priceFormat: tickersInfo[ticker],
             });
             removeAllAlerts();
+            resetFastForwardStatus();
 
             if (response.action === 'switch') {
                 updateDatetimepickerRange(ticker);
@@ -668,7 +672,7 @@ function registerKeyboardEventHandler() {
                 break;
 
             case 'KeyF':
-                // Fast forward until triggered any alert, or at most N_BARS,
+                // Fast forward until triggered any alert, or at most LIMIT_N_BARS,
                 // whichever happens first
                 fastForwardStatus.isFastForwarding = true;
                 sendStepAction();

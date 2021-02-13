@@ -224,12 +224,10 @@ async function resetAllScales() {
 function registerFitButtonsHandler() {
     document.getElementById('fit-chart1-button').onclick = (event) => {
         fullUpdateSeriesPriceScales(candleSeries1, candleSeries2, candleSeries1);
-        setPriceScalesAutoScale();
         event.target.blur();
     }
     document.getElementById('fit-chart2-button').onclick = (event) => {
         fullUpdateSeriesPriceScales(candleSeries1, candleSeries2, candleSeries2);
-        setPriceScalesAutoScale();
         event.target.blur();
     }
     document.getElementById('reset-scales-button').onclick = (event) => {

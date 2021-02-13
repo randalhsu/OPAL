@@ -341,7 +341,7 @@ function updateAlertPricesTable() {
     titleLi.innerHTML = `
     <i class="fa fa-bell" aria-hidden="true"></i>
     &nbsp;&nbsp;Alert Prices
-    <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    <button type="button" class="close" aria-label="Remove" title="Remove all alerts"><span aria-hidden="true">&times;</span></button>
     `;
     titleLi.getElementsByTagName('button')[0].onclick = () => {
         removeAllAlerts();
@@ -359,7 +359,7 @@ function updateAlertPricesTable() {
             li.setAttribute('class', 'list-group-item list-group-item-primary');
             li.innerHTML = `
             ${priceString}
-            <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <button type="button" class="close" aria-label="Remove" title="Remove alert"><span aria-hidden="true">&times;</span></button>
             `;
             li.getElementsByTagName('button')[0].onclick = () => {
                 removeAlertPriceString(priceString);
@@ -743,7 +743,7 @@ function initDatetimepicker() {
             event.target.blur();
         }
     });
-};
+}
 
 window.onbeforeunload = function () {
     socket.close();

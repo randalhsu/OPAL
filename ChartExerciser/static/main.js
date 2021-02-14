@@ -278,12 +278,11 @@ function attachDailyOpenPriceLineToSeries(series, price) {
     });
 }
 
+candleSeries1.alertPriceLines = [];
+candleSeries2.alertPriceLines = [];
 let alertPriceStrings = [];
 
 function attachAlertPriceLinesToSeries(series) {
-    if (series.alertPriceLines === undefined) {
-        series.alertPriceLines = [];
-    }
     const alreadyAttachedAlertPriceStrings = [...series.alertPriceLines.map(priceLine => priceLine.priceString)];
     for (const priceString of alertPriceStrings) {
         if (alreadyAttachedAlertPriceStrings.includes(priceString)) {
@@ -301,9 +300,6 @@ function attachAlertPriceLinesToSeries(series) {
 }
 
 function removeAllAlertPriceLinesFromSeries(series) {
-    if (series.alertPriceLines === undefined) {
-        return;
-    }
     for (const priceLine of series.alertPriceLines) {
         series.removePriceLine(priceLine);
     }
@@ -356,33 +352,26 @@ function updateAlertPricesTable() {
     }
 
     const titleLi = document.createElement('li');
-    titleLi.setAttribute('class', 'list-group-item');
+    titleLi.setAttribute('class', 'list-group-item list-group-item-info');
     titleLi.innerHTML = `
-    <i class="fa fa-bell" aria-hidden="true"></i>
-    &nbsp;&nbsp;Alert Prices
-    <button type="button" class="close" aria-label="Remove" title="Remove all alerts"><span aria-hidden="true">&times;</span></button>
+        <i class="fa fa-bell" aria-hidden="true"></i>
+        &nbsp;&nbsp;Alert Prices
+        <button type="button" class="close" aria-label="Remove" title="Remove all alerts"><span aria-hidden="true">&times;</span></button>
     `;
-    titleLi.getElementsByTagName('button')[0].onclick = () => {
-        removeAllAlerts();
-    };
+    titleLi.getElementsByTagName('button')[0].onclick = () => removeAllAlerts();
     ul.appendChild(titleLi);
 
     if (alertPriceStrings.length === 0) {
-        const li = document.createElement('li');
-        li.setAttribute('class', 'list-group-item');
-        li.innerHTML = '(Empty)';
-        ul.appendChild(li);
+        ul.appendChild(createEmptyLi());
     } else {
         for (const priceString of alertPriceStrings) {
             const li = document.createElement('li');
             li.setAttribute('class', 'list-group-item list-group-item-primary');
             li.innerHTML = `
-            ${priceString}
-            <button type="button" class="close" aria-label="Remove" title="Remove alert"><span aria-hidden="true">&times;</span></button>
+                ${priceString}
+                <button type="button" class="close" aria-label="Remove" title="Remove alert"><span aria-hidden="true">&times;</span></button>
             `;
-            li.getElementsByTagName('button')[0].onclick = () => {
-                removeAlertPriceString(priceString);
-            };
+            li.getElementsByTagName('button')[0].onclick = () => removeAlertPriceString(priceString);
             ul.appendChild(li);
         }
     }
@@ -997,8 +986,7 @@ function registerKeyboardEventHandler() {
         switch (event.code) {
             case 'Space':
             case 'ArrowRight':
-                const currentTicker = document.getElementById('current-ticker').innerText;
-                const maxDate = tickersInfo[currentTicker].maxDate;
+                const maxDate = getTickerInfo().maxDate;
                 if (maxDate == getCurrentChartTime()) {
                     showMessage('Already reached final bar!', 2000);
                     return;

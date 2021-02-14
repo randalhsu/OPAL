@@ -846,8 +846,6 @@ socket.onopen = function (e) {
     registerChangeTickerHandler();
     registerCopyDatetimeHandler();
     registerKeyboardEventHandler();
-    registerChartMouseClickHandler(chart1, 'chart1');
-    registerChartMouseClickHandler(chart2, 'chart2');
     registerFitButtonsHandler();
     updateAlertPricesTable();
     updateOrdersTable();
@@ -1030,35 +1028,6 @@ function registerKeyboardEventHandler() {
                 break;
         }
     }, true);
-}
-
-function setChartMenuVisibility(visibility) {
-    const menu = document.getElementById('chart-menu');
-    const classList = menu.classList;
-    if (visibility === true) {
-        classList.remove('d-none');
-    } else if (visibility === false) {
-        classList.add('d-none');
-    }
-}
-
-function registerChartMouseClickHandler(chart, chartElementId) {
-    const menu = document.getElementById('chart-menu');
-    const container = document.getElementById(chartElementId);
-    const leftPriceScale = container.getElementsByTagName('td')[0];
-
-    function handleClick(param) {
-        if (!param.point) {
-            return;
-        }
-        const rect = leftPriceScale.getBoundingClientRect();
-        const offsetX = window.scrollX + rect.right;
-        const offsetY = window.scrollY + rect.top;
-        menu.style.left = `${offsetX + param.point.x}px`;
-        menu.style.top = `${offsetY + param.point.y}px`;
-        console.log(`click (${param.point.x}, ${param.point.y}) point, time ${param.time}`, param.seriesPrices);
-    }
-    chart.subscribeClick(handleClick);
 }
 
 function initDatetimepicker() {

@@ -160,6 +160,18 @@ function getCurrentChartTime() {
     return null;
 }
 
+function getLastPrice() {
+    if (fetchedBars.length > 0) {
+        return fetchedBars[fetchedBars.length - 1].close;
+    }
+    return NaN;
+}
+
+function getTickerInfo(ticker) {
+    const currentTicker = ticker || document.getElementById('current-ticker').innerText;
+    return tickersInfo[currentTicker];
+}
+
 
 let specifiedDominantSeries = undefined;
 
@@ -330,6 +342,13 @@ function removeAlertPriceString(priceString) {
     updateAlertPricesTable();
 }
 
+function createEmptyLi() {
+    const li = document.createElement('li');
+    li.setAttribute('class', 'list-group-item');
+    li.innerHTML = '(Empty)';
+    return li;
+}
+
 function updateAlertPricesTable() {
     const ul = document.getElementById('alert-prices-ul');
     while (ul.firstChild) {
@@ -416,7 +435,317 @@ function beep(frequency = 718, type = 'triangle', volume = 0.1, duration = 250) 
     oscillator.type = type;
     oscillator.start();
     setTimeout(() => oscillator.stop(), duration);
-};
+}
+
+
+const DIRECTION_TYPES = ['buy', 'sell'];
+let orderId = 1;
+let orders = [];
+
+class Order {
+    constructor(type, priceString) {
+        if (!DIRECTION_TYPES.includes(type) || priceString === null) {
+            throw new TypeError('invalid params');
+        }
+        this.type = type;
+        this.priceString = priceString;
+        this.id = orderId++;
+    }
+}
+
+candleSeries1.attachedOrderPriceLines = {};
+candleSeries2.attachedOrderPriceLines = {};
+
+function addOrder(type, priceString) {
+    if (priceString === null) {
+        return;
+    }
+    const order = new Order(type, priceString);
+    attachOrderPriceLineToSeries(order);
+    orders.push(order);
+    showMessage(`Pending ${type} order @ ${priceString}`, 2000);
+    updateOrdersTable();
+}
+
+function removeOrder(order) {
+    detachOrderPriceLineFromSeries(order);
+    orders = orders.filter(o => o !== order);
+    updateOrdersTable();
+}
+
+function removeAllOrders() {
+    for (const order of orders) {
+        detachOrderPriceLineFromSeries(order);
+    }
+    orders = [];
+    updateOrdersTable();
+}
+
+function attachOrderPriceLineToSeries(order) {
+    const COLOR = {
+        buy: 'rgba(53, 162, 74, 1)',
+        sell: 'rgba(229, 37, 69, 1)',
+    };
+    for (const series of [candleSeries1, candleSeries2]) {
+        if (series.attachedOrderPriceLines.hasOwnProperty(order.id)) {
+            continue;
+        }
+        const orderPriceLine = series.createPriceLine({
+            price: +order.priceString,
+            color: COLOR[order.type],
+            lineStyle: LightweightCharts.LineStyle.Solid,
+        });
+        orderPriceLine.priceString = order.priceString;
+        series.attachedOrderPriceLines[order.id] = orderPriceLine;
+    }
+}
+
+function detachOrderPriceLineFromSeries(order) {
+    for (const series of [candleSeries1, candleSeries2]) {
+        const priceLines = series.attachedOrderPriceLines;
+        if (priceLines.hasOwnProperty(order.id)) {
+            const priceLine = priceLines[order.id];
+            series.removePriceLine(priceLine);
+            delete priceLines[order.id];
+        }
+    }
+}
+
+function checkIfOrderTriggered() {
+    let hasTriggeredOrder = false;
+    if (fetchedBars.length >= 2) {
+        const lastBar = fetchedBars[fetchedBars.length - 1];
+        const secondLastBar = fetchedBars[fetchedBars.length - 2];
+        const isAscending = lastBar.open > secondLastBar.close;
+
+        orders.sort((a, b) => (+a.priceString) - (+b.priceString));
+        positions.sort((a, b) => a.id - b.id);
+        if (!isAscending) {
+            orders.reverse();
+        }
+
+        for (const order of orders) {
+            const price = +order.priceString;
+            const isTriggeredByGap =
+                (isAscending && (secondLastBar.close < price && price <= lastBar.open)) ||
+                (!isAscending && (secondLastBar.close > price && price >= lastBar.open));
+
+            if (isTriggeredByGap) {
+                activateOrder(order, lastBar.open);
+                hasTriggeredOrder = true;
+            } else if (lastBar.low <= price && price <= lastBar.high) {
+                activateOrder(order, price);
+                hasTriggeredOrder = true;
+            }
+        }
+    }
+    return hasTriggeredOrder;
+}
+
+function isPairingDirections(obj1, obj2) {
+    return (obj1.type === 'buy' && obj2.type === 'sell') ||
+        (obj1.type === 'sell' && obj2.type === 'buy');
+}
+
+function activateOrder(order, triggeredPrice) {
+    let hasClosedAPosition = false;
+    for (const position of positions) {
+        if (position.status === 'running' && isPairingDirections(order, position)) {
+            position.setClosedPrice(triggeredPrice);
+            hasClosedAPosition = true;
+            break;
+        }
+    }
+    if (!hasClosedAPosition) {
+        openPosition(order.type, triggeredPrice);
+    }
+    removeOrder(order);
+}
+
+function updateOrdersTable() {
+    const ul = document.getElementById('orders-ul');
+    while (ul.firstChild) {
+        ul.removeChild(ul.firstChild);
+    }
+
+    const titleLi = document.createElement('li');
+    titleLi.setAttribute('class', 'list-group-item list-group-item-info');
+    titleLi.innerHTML = `
+        <i class="fa fa-book" aria-hidden="true"></i>
+        &nbsp;&nbsp;Orders
+        <button type="button" class="close" aria-label="Remove" title="Remove all orders"><span aria-hidden="true">&times;</span></button>
+    `;
+    titleLi.getElementsByTagName('button')[0].onclick = () => removeAllOrders();
+    ul.appendChild(titleLi);
+
+    if (orders.length === 0) {
+        ul.appendChild(createEmptyLi());
+    } else {
+        orders.sort((a, b) => (+b.priceString) - (+a.priceString));
+        for (const order of orders) {
+            const li = document.createElement('li');
+            li.setAttribute('class', 'list-group-item');
+            if (order.type === 'buy') {
+                li.classList.add('list-group-item-success');
+            } else {
+                li.classList.add('list-group-item-danger');
+            }
+            li.innerHTML = `
+                ${order.type} @ ${order.priceString}
+                <button type="button" class="close" aria-label="Remove" title="Remove order"><span aria-hidden="true">&times;</span></button>
+            `;
+            li.getElementsByTagName('button')[0].onclick = () => removeOrder(order);
+            ul.appendChild(li);
+        }
+    }
+}
+
+
+function convertPriceToString(price, precision) {
+    precision = precision || getTickerInfo().precision;
+    if (price >= 0) {
+        return price.toFixed(precision);
+    }
+    return `(${Math.abs(price).toFixed(precision)})`;
+}
+
+let positionId = 1;
+let positions = [];
+
+class Position {
+    constructor(type, openedPrice) {
+        if (!DIRECTION_TYPES.includes(type) || openedPrice === undefined) {
+            throw new TypeError('invalid params');
+        }
+        this.type = type;
+        this.openedPrice = openedPrice;
+        this.closedPrice = null;
+        this.id = positionId++;
+    }
+    setClosedPrice(price) {
+        this.closedPrice = price;
+    }
+    get status() {
+        if (this.closedPrice === null) {
+            return 'running';
+        }
+        return 'closed';
+    }
+    calculatePL() {
+        const tickerInfo = getTickerInfo();
+        const endPrice = this.closedPrice || getLastPrice();
+        let steps = (endPrice - this.openedPrice) / tickerInfo.minMove;
+        if (this.type === 'sell') {
+            steps = -steps;
+        }
+        return steps * tickerInfo.tickValue;
+    }
+    toString() {
+        const openedPrice = convertPriceToString(this.openedPrice);
+        let closedPrice = '';
+        if (this.closedPrice !== null) {
+            let arrow = '🡲';
+            if (this.openedPrice < this.closedPrice) {
+                arrow = '🡵';
+            } else if (this.openedPrice > this.closedPrice) {
+                arrow = '🡶';
+            }
+            closedPrice = ` ${arrow} ${convertPriceToString(this.closedPrice)}`;
+        }
+        let pl = this.calculatePL();
+        pl = convertPriceToString(pl);
+        return `${this.type} @ ${openedPrice}${closedPrice}&nbsp;&nbsp;[$${pl}]`;
+    }
+}
+
+function calculatePositionsTotalPL() {
+    return positions.map(p => p.calculatePL()).reduce((sum, current) => sum + current, 0);
+}
+
+function openPosition(type, openedPrice) {
+    positions.push(new Position(type, openedPrice));
+}
+
+function closePosition(position, closedPrice) {
+    closedPrice = closedPrice || getLastPrice();
+    position.setClosedPrice(closedPrice);
+    updatePositionsTable();
+}
+
+function removePosition(position) {
+    positions = positions.filter(p => p !== position);
+    updatePositionsTable();
+}
+
+function removeAllClosedPositions() {
+    positions = positions.filter(position => position.status === 'running');
+    updatePositionsTable();
+}
+
+function removeAllPositions() {
+    for (const position of positions) {
+        if (position.status === 'running') {
+            position.setClosedPrice(getLastPrice());
+        }
+    }
+    removeAllClosedPositions();
+}
+
+function updatePositionsTable() {
+    const ul = document.getElementById('positions-ul');
+    while (ul.firstChild) {
+        ul.removeChild(ul.firstChild);
+    }
+
+    const titleLi = document.createElement('li');
+    titleLi.setAttribute('class', 'list-group-item list-group-item-info');
+    let totalPLString = '';
+    if (positions.length > 0) {
+        const totalPL = calculatePositionsTotalPL();
+        totalPLString = `: $${convertPriceToString(totalPL)}`;
+    }
+    titleLi.innerHTML = `
+        <i class="fa fa-rocket" aria-hidden="true"></i>
+        &nbsp;&nbsp;Positions [P/L${totalPLString}]
+        <button type="button" class="close" aria-label="Dismiss" title="Dismiss all closed positions"><span aria-hidden="true">&times;</span></button>
+    `;
+    titleLi.getElementsByTagName('button')[0].onclick = () => removeAllClosedPositions();
+    ul.appendChild(titleLi);
+
+    if (positions.length === 0) {
+        ul.appendChild(createEmptyLi());
+    } else {
+        positions.sort((a, b) => b.id - a.id);
+        for (const position of positions) {
+            let class_ = '';
+            let title = 'Dismiss';
+            let fn = removePosition;
+            if (position.status === 'running') {
+                class_ = 'list-group-item-warning';
+                title = 'Close';
+                fn = closePosition;
+            } else {
+                const pl = position.calculatePL();
+                if (pl >= 0) {
+                    class_ = 'list-group-item-success';
+                } else {
+                    class_ = 'list-group-item-danger';
+                }
+            }
+
+            const li = document.createElement('li');
+            li.setAttribute('class', 'list-group-item');
+            li.classList.add(class_);
+            li.innerHTML = `
+                ${position}
+                <button type="button" class="close" aria-label="${title}" title="${title} position"><span aria-hidden="true">&times;</span></button>
+            `;
+            li.getElementsByTagName('button')[0].onclick = () => fn(position);
+            ul.appendChild(li);
+        }
+    }
+}
+
 
 function showMessage(message, timeout = 0) {
     const el = document.getElementById('message');
@@ -504,8 +833,8 @@ function resetFastForwardStatus() {
     fastForwardStatus.fastForwardedBars = 0;
 }
 
-function checkIfContinueFastForwardJourney(lastBarTriggeredAlert) {
-    if (lastBarTriggeredAlert) {
+function checkIfContinueFastForwardJourney(hasTriggeredPriceLine) {
+    if (hasTriggeredPriceLine) {
         resetFastForwardStatus();
         return;
     }
@@ -532,6 +861,8 @@ socket.onopen = function (e) {
     registerChartMouseClickHandler(chart2, 'chart2');
     registerFitButtonsHandler();
     updateAlertPricesTable();
+    updateOrdersTable();
+    updatePositionsTable();
 
     sendInitAction();
     sendSwitchAction('MES');
@@ -576,7 +907,12 @@ function handleResponse(response) {
             candleSeries2.update(bar);
 
             const lastBarTriggeredAlert = checkIfAlertTriggered();
-            checkIfContinueFastForwardJourney(lastBarTriggeredAlert);
+            const lastBarTriggeredOrder = checkIfOrderTriggered();
+            const hasTriggeredPriceLine = lastBarTriggeredAlert || lastBarTriggeredOrder;
+            checkIfContinueFastForwardJourney(hasTriggeredPriceLine);
+
+            updateOrdersTable();
+            updatePositionsTable();
             break;
 
         case 'stepback':
@@ -585,6 +921,11 @@ function handleResponse(response) {
 
         case 'switch':
         case 'goto':
+            removeAllAlerts();
+            removeAllOrders();
+            removeAllPositions();
+            resetFastForwardStatus();
+
             const bars = response.data;
             const ticker = response.ticker;
             hourlyBars = resampleToHourlyBars(bars);
@@ -598,8 +939,6 @@ function handleResponse(response) {
             candleSeries2.applyOptions({
                 priceFormat: tickersInfo[ticker],
             });
-            removeAllAlerts();
-            resetFastForwardStatus();
 
             if (response.action === 'switch') {
                 updateDatetimepickerRange(ticker);
@@ -692,6 +1031,14 @@ function registerKeyboardEventHandler() {
 
             case 'KeyA':
                 addAlertPriceString(mouseHoverPriceString);
+                break;
+
+            case 'KeyB':
+                addOrder('buy', mouseHoverPriceString);
+                break;
+
+            case 'KeyS':
+                addOrder('sell', mouseHoverPriceString);
                 break;
         }
     }, true);

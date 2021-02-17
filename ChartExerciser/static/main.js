@@ -278,64 +278,115 @@ function attachDailyOpenPriceLineToSeries(series, price) {
     });
 }
 
-candleSeries1.alertPriceLines = [];
-candleSeries2.alertPriceLines = [];
-let alertPriceStrings = [];
 
-function attachAlertPriceLinesToSeries(series) {
-    const alreadyAttachedAlertPriceStrings = [...series.alertPriceLines.map(priceLine => priceLine.priceString)];
-    for (const priceString of alertPriceStrings) {
-        if (alreadyAttachedAlertPriceStrings.includes(priceString)) {
+const PRICE_LINE_COLOR = {
+    alert: 'rgba(0, 86, 179, 1)',
+    buy: 'rgba(53, 162, 74, 1)',
+    sell: 'rgba(229, 37, 69, 1)',
+};
+
+function getPriceLineType(priceLine) {
+    function getKeyByValue(object, value) {
+        return Object.keys(object).find(key => object[key] === value);
+    }
+    return getKeyByValue(PRICE_LINE_COLOR, priceLine.options().color);
+}
+
+function customPriceLineDraggedHandler(params) {
+    const priceLine = params.customPriceLine;
+    const type = getPriceLineType(priceLine);
+
+    if (type === 'alert') {
+        syncDraggablePriceLines(alerts, priceLine, params.fromPriceString);
+        updateAlertPricesTable();
+    } else if (DIRECTION_TYPES.includes(type)) {
+        syncDraggablePriceLines(orders, priceLine, params.fromPriceString);
+        updateOrdersTable();
+    }
+}
+
+function syncDraggablePriceLines(collections, draggedPriceLine, fromPriceString) {
+    const series = (draggedPriceLine.series() === candleSeries1.series() ? candleSeries1 : candleSeries2);
+    const newPrice = draggedPriceLine.options().price;
+    const type = getPriceLineType(draggedPriceLine);
+
+    for (const object of collections) {
+        if (object.type !== type) {
             continue;
         }
-        const alertPriceLine = series.createPriceLine({
-            price: +priceString,
-            color: 'rgba(0, 86, 179, 1)',
-            lineWidth: 2,
-            lineStyle: LightweightCharts.LineStyle.Dotted,
-        });
-        alertPriceLine.priceString = priceString;
-        series.alertPriceLines.push(alertPriceLine);
+        if (series === candleSeries1) {
+            const priceLine = object.series2PriceLine;
+            const price = priceLine.options().price;
+            if (chart2.priceScale('right').formatPrice(price) === fromPriceString) {
+                priceLine.applyOptions({ price: newPrice });
+                object.priceString = chart1.priceScale('left').formatPrice(newPrice);
+                return;
+            }
+        } else {
+            const priceLine = object.series1PriceLine;
+            const price = priceLine.options().price;
+            if (chart1.priceScale('left').formatPrice(price) === fromPriceString) {
+                priceLine.applyOptions({ price: newPrice });
+                object.priceString = chart2.priceScale('right').formatPrice(newPrice);
+                return;
+            }
+        }
     }
 }
 
-function removeAllAlertPriceLinesFromSeries(series) {
-    for (const priceLine of series.alertPriceLines) {
-        series.removePriceLine(priceLine);
+chart1.subscribeCustomPriceLineDragged(customPriceLineDraggedHandler);
+chart2.subscribeCustomPriceLineDragged(customPriceLineDraggedHandler);
+
+
+let alertId = 1;
+let alerts = [];
+
+class Alert {
+    constructor(priceString) {
+        if (priceString === null) {
+            throw new TypeError('invalid params');
+        }
+        this.type = 'alert';
+        this.priceString = priceString;
+        this.id = alertId++;
+        this.series1PriceLine = null;
+        this.series2PriceLine = null;
     }
-    series.alertPriceLines = [];
 }
 
-function addAlertPriceString(priceString) {
+function addAlert(priceString) {
     if (priceString === null) {
         return;
     }
-    if (alertPriceStrings.includes(priceString)) {
-        showMessage(`🔔 ${priceString}`, 1500);
+    if (alerts.map(alert => alert.priceString).includes(priceString)) {
         return;
     }
-    alertPriceStrings.push(priceString);
-    alertPriceStrings.sort().reverse();
-    attachAlertPriceLinesToSeries(candleSeries1);
-    attachAlertPriceLinesToSeries(candleSeries2);
+
+    const priceLineOptions = {
+        price: +priceString,
+        color: PRICE_LINE_COLOR.alert,
+        lineWidth: 2,
+        lineStyle: LightweightCharts.LineStyle.Dotted,
+        draggable: true,
+    };
+    const alert = new Alert(priceString);
+    alert.series1PriceLine = candleSeries1.createPriceLine(priceLineOptions);
+    alert.series2PriceLine = candleSeries2.createPriceLine(priceLineOptions);
+    alerts.push(alert);
+
     updateAlertPricesTable();
     showMessage(`🔔 ${priceString}`, 1500);
 }
 
-function removeAlertPriceString(priceString) {
-    alertPriceStrings = alertPriceStrings.filter(s => s !== priceString);
-    for (const series of [candleSeries1, candleSeries2]) {
-        for (const priceLine of series.alertPriceLines) {
-            if (priceLine.priceString === priceString) {
-                series.removePriceLine(priceLine);
-                series.alertPriceLines = series.alertPriceLines.filter(
-                    priceLine => priceLine.priceString !== priceString
-                );
-                break;
-            }
-        }
-    }
+function removeAlert(alert) {
+    candleSeries1.removePriceLine(alert.series1PriceLine);
+    candleSeries2.removePriceLine(alert.series2PriceLine);
+    alerts = alerts.filter(a => a !== alert);
     updateAlertPricesTable();
+}
+
+function removeAllAlerts() {
+    alerts.forEach(alert => removeAlert(alert));
 }
 
 function createEmptyLi() {
@@ -361,24 +412,25 @@ function updateAlertPricesTable() {
     titleLi.getElementsByTagName('button')[0].onclick = () => removeAllAlerts();
     ul.appendChild(titleLi);
 
-    if (alertPriceStrings.length === 0) {
+    if (alerts.length === 0) {
         ul.appendChild(createEmptyLi());
     } else {
-        for (const priceString of alertPriceStrings) {
+        alerts.sort((a, b) => (+b.priceString) - (+a.priceString));
+        for (const alert of alerts) {
             const li = document.createElement('li');
             li.setAttribute('class', 'list-group-item list-group-item-primary');
             li.innerHTML = `
-                ${priceString}
+                ${alert.priceString}
                 <button type="button" class="close" aria-label="Remove" title="Remove alert"><span aria-hidden="true">&times;</span></button>
             `;
-            li.getElementsByTagName('button')[0].onclick = () => removeAlertPriceString(priceString);
+            li.getElementsByTagName('button')[0].onclick = () => removeAlert(alert);
             ul.appendChild(li);
         }
     }
 }
 
 function checkIfAlertTriggered() {
-    let isAlertTriggered = false;
+    let hasTriggeredAlert = false;
     if (fetchedBars.length >= 2) {
         const lastBar = fetchedBars[fetchedBars.length - 1];
         const secondLastBar = fetchedBars[fetchedBars.length - 2];
@@ -392,26 +444,19 @@ function checkIfAlertTriggered() {
             high = secondLastBar.low;
         }
 
-        for (const priceString of alertPriceStrings) {
-            const price = +priceString;
+        for (const alert of alerts) {
+            const price = +alert.priceString;
             if (low <= price && price <= high) {
-                showMessage(`🔔 ${priceString} triggered!`, 2000);
-                removeAlertPriceString(priceString);
-                isAlertTriggered = true;
+                showMessage(`🔔 ${alert.priceString} triggered!`, 2000);
+                removeAlert(alert);
+                hasTriggeredAlert = true;
             }
         }
     }
-    if (isAlertTriggered) {
+    if (hasTriggeredAlert) {
         beep();
     }
-    return isAlertTriggered;
-}
-
-function removeAllAlerts() {
-    alertPriceStrings = [];
-    removeAllAlertPriceLinesFromSeries(candleSeries1);
-    removeAllAlertPriceLinesFromSeries(candleSeries2);
-    updateAlertPricesTable();
+    return hasTriggeredAlert;
 }
 
 function beep(frequency = 718, type = 'triangle', volume = 0.1, duration = 250) {
@@ -439,65 +484,40 @@ class Order {
         this.type = type;
         this.priceString = priceString;
         this.id = orderId++;
+        this.series1PriceLine = null;
+        this.series2PriceLine = null;
     }
 }
-
-candleSeries1.attachedOrderPriceLines = {};
-candleSeries2.attachedOrderPriceLines = {};
 
 function addOrder(type, priceString) {
     if (priceString === null) {
         return;
     }
+
+    const priceLineOptions = {
+        price: +priceString,
+        color: PRICE_LINE_COLOR[type],
+        lineStyle: LightweightCharts.LineStyle.Solid,
+        draggable: true,
+    };
     const order = new Order(type, priceString);
-    attachOrderPriceLineToSeries(order);
+    order.series1PriceLine = candleSeries1.createPriceLine(priceLineOptions);
+    order.series2PriceLine = candleSeries2.createPriceLine(priceLineOptions);
     orders.push(order);
+
     showMessage(`Pending ${type} order @ ${priceString}`, 2000);
     updateOrdersTable();
 }
 
 function removeOrder(order) {
-    detachOrderPriceLineFromSeries(order);
+    candleSeries1.removePriceLine(order.series1PriceLine);
+    candleSeries2.removePriceLine(order.series2PriceLine);
     orders = orders.filter(o => o !== order);
     updateOrdersTable();
 }
 
 function removeAllOrders() {
-    for (const order of orders) {
-        detachOrderPriceLineFromSeries(order);
-    }
-    orders = [];
-    updateOrdersTable();
-}
-
-function attachOrderPriceLineToSeries(order) {
-    const COLOR = {
-        buy: 'rgba(53, 162, 74, 1)',
-        sell: 'rgba(229, 37, 69, 1)',
-    };
-    for (const series of [candleSeries1, candleSeries2]) {
-        if (series.attachedOrderPriceLines.hasOwnProperty(order.id)) {
-            continue;
-        }
-        const orderPriceLine = series.createPriceLine({
-            price: +order.priceString,
-            color: COLOR[order.type],
-            lineStyle: LightweightCharts.LineStyle.Solid,
-        });
-        orderPriceLine.priceString = order.priceString;
-        series.attachedOrderPriceLines[order.id] = orderPriceLine;
-    }
-}
-
-function detachOrderPriceLineFromSeries(order) {
-    for (const series of [candleSeries1, candleSeries2]) {
-        const priceLines = series.attachedOrderPriceLines;
-        if (priceLines.hasOwnProperty(order.id)) {
-            const priceLine = priceLines[order.id];
-            series.removePriceLine(priceLine);
-            delete priceLines[order.id];
-        }
-    }
+    orders.forEach(order => removeOrder(order));
 }
 
 function checkIfOrderTriggered() {
@@ -1016,7 +1036,7 @@ function registerKeyboardEventHandler() {
                 break;
 
             case 'KeyA':
-                addAlertPriceString(mouseHoverPriceString);
+                addAlert(mouseHoverPriceString);
                 break;
 
             case 'KeyB':

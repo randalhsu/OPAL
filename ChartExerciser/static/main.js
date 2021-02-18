@@ -263,7 +263,7 @@ function registerFitButtonsHandler() {
 }
 
 
-function drawDailyOpenPrice(series1, series2) {
+function drawDailyOpenPrice() {
     const localeHourDiff = new Date().getTimezoneOffset() / 60;
     for (let i = fetchedBars.length - 1; i >= 0; --i) {
         const date = new Date(fetchedBars[i].time * 1000);
@@ -271,8 +271,9 @@ function drawDailyOpenPrice(series1, series2) {
         const userDailyOpenHour = (DATA_DAILY_OPEN_HOUR + getUTCOffsetHours() + 24) % 24;
         if ((date.getHours() + localeHourDiff + 24) % 24 === userDailyOpenHour && date.getMinutes() === 0) {
             const dailyOpenPrice = fetchedBars[i].open;
-            attachDailyOpenPriceLineToSeries(series1, dailyOpenPrice);
-            attachDailyOpenPriceLineToSeries(series2, dailyOpenPrice);
+            for (const series of [candleSeries1, candleSeries2]) {
+                attachDailyOpenPriceLineToSeries(series, dailyOpenPrice);
+            }
             return;
         }
     }
@@ -962,7 +963,7 @@ function handleResponse(response) {
             break;
     }
     updateSeriesPriceScales(candleSeries1, candleSeries2);
-    drawDailyOpenPrice(candleSeries1, candleSeries2);
+    drawDailyOpenPrice();
     updateDatetimepickerCurrentDatetime(getCurrentChartTime());
 }
 

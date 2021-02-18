@@ -789,39 +789,12 @@ function registerChangeTickerHandler() {
     }
 }
 
-function registerCopyDatetimeHandler() {
-    const button = document.getElementById('copy-datetime-button');
-    button.onclick = () => {
-        const string = $('#datetimepicker1').datetimepicker('date').format(DATETIME_FORMAT);
-        copyTextToClipboard(string);
-    }
-}
-
-function copyTextToClipboard(text) {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.top = '0';
-    textArea.style.left = '0';
-    textArea.style.position = 'fixed';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    let message = 'Failed to copy!';
-    try {
-        if (document.execCommand('copy')) {
-            message = 'Copied datetime!';
-        }
-    } catch (error) {
-        console.log(error);
-    }
-    showMessage(message, 1500);
-    document.body.removeChild(textArea);
-}
-
 function updateDatetimepickerCurrentDatetime(timestamp) {
     //TODO: locale bug when near final bar
     if (typeof timestamp === 'number') {
-        $('#datetimepicker1').datetimepicker('date', moment.utc(timestamp * 1000));
+        const time = moment.utc(timestamp * 1000);
+        $('#datetimepicker1').datetimepicker('date', time);
+        document.getElementById('weekday').innerText = `[${time.format('ddd')}]`;
     }
 }
 
@@ -873,7 +846,6 @@ const socket = new WebSocket(`ws://${window.location.host}/socket`);
 socket.onopen = function (e) {
     initDatetimepicker();
     registerChangeTickerHandler();
-    registerCopyDatetimeHandler();
     registerKeyboardEventHandler();
     registerFitButtonsHandler();
     updateAlertPricesTable();
@@ -1079,6 +1051,10 @@ function initDatetimepicker() {
         if (event.code === 'Enter' || event.code === 'NumpadEnter') {
             event.target.blur();
         }
+    });
+    document.getElementsByClassName('input-group-append')[0].addEventListener('click', (event) => {
+        datetimepickerInput.focus();
+        datetimepickerInput.setSelectionRange(0, datetimepickerInput.value.length);
     });
 }
 

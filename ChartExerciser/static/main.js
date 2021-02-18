@@ -2,6 +2,20 @@
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm';
+const DATA_UTC_OFFSET_HOUR = -5  // EST
+const DATA_DAILY_OPEN_HOUR = 18;
+
+const configs = {
+    userUTCOffsetHour: 8,  // if changed, should clear all fetchedBars
+};
+
+function getUTCOffsetHours() {
+    return configs.userUTCOffsetHour - DATA_UTC_OFFSET_HOUR;
+}
+
+function getUTCOffsetSeconds() {
+    return getUTCOffsetHours() * 3600;
+}
 
 let tickersInfo = {};
 let fetchedBars = [];
@@ -254,7 +268,8 @@ function drawDailyOpenPrice(series1, series2) {
     for (let i = fetchedBars.length - 1; i >= 0; --i) {
         const date = new Date(fetchedBars[i].time * 1000);
         //TODO: DST may change hour?
-        if ((date.getHours() + localeHourDiff + 24) % 24 === 18 && date.getMinutes() === 0) {
+        const userDailyOpenHour = (DATA_DAILY_OPEN_HOUR + getUTCOffsetHours() + 24) % 24;
+        if ((date.getHours() + localeHourDiff + 24) % 24 === userDailyOpenHour && date.getMinutes() === 0) {
             const dailyOpenPrice = fetchedBars[i].open;
             attachDailyOpenPriceLineToSeries(series1, dailyOpenPrice);
             attachDailyOpenPriceLineToSeries(series2, dailyOpenPrice);
@@ -841,6 +856,14 @@ function checkIfContinueFastForwardJourney(hasTriggeredPriceLine) {
 }
 
 
+function adjustBarTimeByUTCOffset(bar) {
+    bar.time += getUTCOffsetSeconds();
+}
+
+function adjustBarsTimeByUTCOffset(bars) {
+    bars.forEach(bar => adjustBarTimeByUTCOffset(bar));
+}
+
 const socket = new WebSocket(`ws://${window.location.host}/socket`);
 
 socket.onopen = function (e) {
@@ -885,6 +908,8 @@ function handleResponse(response) {
 
         case 'step':
             const bar = response.data[0];
+            adjustBarTimeByUTCOffset(bar);
+
             if (bar.time == getCurrentChartTime()) {
                 showMessage('Already reached final bar!', 2000);
                 return;
@@ -916,6 +941,8 @@ function handleResponse(response) {
 
             const bars = response.data;
             const ticker = response.ticker;
+            adjustBarsTimeByUTCOffset(bars);
+
             hourlyBars = resampleToHourlyBars(bars);
             candleSeries1.setData(hourlyBars);
             candleSeries2.setData(bars);
@@ -1013,7 +1040,7 @@ function registerKeyboardEventHandler() {
                 const hourlyBars = resampleToHourlyBars(fetchedBars);
                 candleSeries1.setData(hourlyBars);
                 candleSeries2.setData(fetchedBars);
-                sendStepbackAction(getCurrentChartTime());
+                sendStepbackAction(getCurrentChartTime() - getUTCOffsetSeconds());
                 break;
 
             case 'KeyA':
@@ -1042,7 +1069,7 @@ function initDatetimepicker() {
 
     const datetimepickerInput = document.getElementById('datetimepicker-input');
     datetimepickerInput.addEventListener('blur', (event) => {
-        const timestamp = moment.utc(event.target.value, DATETIME_FORMAT).unix();
+        const timestamp = moment.utc(event.target.value, DATETIME_FORMAT).unix() - getUTCOffsetSeconds();
         if (timestamp !== getCurrentChartTime()) {
             sendGotoAction(timestamp);
         }

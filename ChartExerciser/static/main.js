@@ -581,7 +581,7 @@ function updateOrdersTable() {
     titleLi.setAttribute('class', 'list-group-item list-group-item-info');
     titleLi.innerHTML = `
         <i class="fa fa-book" aria-hidden="true"></i>
-        &nbsp;&nbsp;Orders
+        &nbsp;&nbsp;Orders&nbsp;&nbsp;[Distance]
         <button type="button" class="close" aria-label="Remove" title="Remove all orders"><span aria-hidden="true">&times;</span></button>
     `;
     titleLi.getElementsByTagName('button')[0].onclick = () => removeAllOrders();
@@ -590,7 +590,10 @@ function updateOrdersTable() {
     if (orders.length === 0) {
         ul.appendChild(createEmptyLi());
     } else {
+        const lastPrice = getLastPrice();
+        const tickerInfo = getTickerInfo();
         orders.sort((a, b) => (+b.priceString) - (+a.priceString));
+
         for (const order of orders) {
             const li = document.createElement('li');
             li.setAttribute('class', 'list-group-item');
@@ -599,8 +602,14 @@ function updateOrdersTable() {
             } else {
                 li.classList.add('list-group-item-danger');
             }
+            const orderPrice = +order.priceString;
+            let distanceTicks = Math.floor((lastPrice - orderPrice) / tickerInfo.minMove);
+            const arrow = distanceTicks > 0 ? '🡶' : distanceTicks < 0 ? '🡵' : '🡲';
+            distanceTicks = Math.abs(distanceTicks);
+            const distanceDollars = (distanceTicks * tickerInfo.tickValue).toFixed(tickerInfo.precision);
+
             li.innerHTML = `
-                ${order.type} @ ${order.priceString}
+                ${order.type} @ ${order.priceString}&nbsp;&nbsp[${arrow} ${distanceTicks} ticks / $${distanceDollars}]
                 <button type="button" class="close" aria-label="Remove" title="Remove order"><span aria-hidden="true">&times;</span></button>
             `;
             li.getElementsByTagName('button')[0].onclick = () => removeOrder(order);

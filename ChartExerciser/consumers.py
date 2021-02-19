@@ -86,12 +86,12 @@ class PriceConsumer(WebsocketConsumer):
         super().__init__(*args, **kwargs)
 
     def connect(self) -> None:
-        print('-> connect()')
         # print(self.scope)
         self.accept()
 
     def disconnect(self, close_code) -> None:
-        print('bye')
+        # print('bye')
+        pass
 
     def set_chart_time(self, time: datetime.datetime) -> bool:
         start_time, end_time = get_time_range_of_dataframe(self.df)
@@ -128,8 +128,11 @@ class PriceConsumer(WebsocketConsumer):
         return time
 
     def get_random_time(self, start_time: datetime.datetime, end_time: datetime.datetime) -> datetime.datetime:
-        MARGIN = datetime.timedelta(days=1)
         FIVE_MINUTES_IN_SECONDS = 60 * 5
+        MARGIN = datetime.timedelta(days=1)
+        if end_time - start_time < 2 * MARGIN:
+            MARGIN = datetime.timedelta(days=0)
+
         start_timestamp = (start_time + MARGIN - EPOCH).total_seconds()
         end_timestamp = (end_time - MARGIN - EPOCH).total_seconds()
         timestamp = random.randrange(
@@ -244,7 +247,7 @@ class PriceConsumer(WebsocketConsumer):
         return response
 
     def receive(self, text_data=None, bytes_data=None) -> None:
-        print('-> receive()', text_data)
+        # print('-> receive()', text_data)
         try:
             response = self.generate_response(text_data)
             json_string = json.dumps(response, separators=(',', ':'))

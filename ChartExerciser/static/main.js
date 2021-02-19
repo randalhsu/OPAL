@@ -1133,6 +1133,7 @@ function handleResponse(response) {
 
             if (bar.time == getCurrentChartTime()) {
                 showMessage('Already reached final bar!', 2000);
+                resetFastForwardStatus();
                 return;
             }
             fetchedBars.push(bar);

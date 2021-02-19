@@ -194,6 +194,91 @@ const chart1 = LightweightCharts.createChart(document.getElementById('chart1'), 
 chartOptions.priceScale.position = 'right';
 const chart2 = LightweightCharts.createChart(document.getElementById('chart2'), chartOptions);
 
+
+let isDraggingChartResizer = false;
+let draggingChartResizer = null;
+
+(function initChartResizersPosition() {
+    const resizer1 = document.getElementById('chart1-resizer');
+    const resizer2 = document.getElementById('chart2-resizer');
+    resizer1.chartId = 'chart1';
+    resizer2.chartId = 'chart2';
+
+    for (const resizer of [resizer1, resizer2]) {
+        const resizerRect = resizer.getBoundingClientRect();
+        const chartRect = document.getElementById(resizer.chartId).querySelector('.tv-lightweight-charts').getBoundingClientRect();
+        const offsetX = chartRect.right - resizerRect.width;
+        const offsetY = window.scrollY + chartRect.bottom - resizerRect.height;
+        resizer.style.left = `${offsetX}px`;
+        resizer.style.top = `${offsetY}px`;
+    }
+})();
+
+function registerChartResizersHandler() {
+    const resetResizer = (resizer) => {
+        resizer.style.cursor = 'grab';
+        resizer.onmousemove = null
+    }
+
+    const resizer1 = document.getElementById('chart1-resizer');
+    const resizer2 = document.getElementById('chart2-resizer');
+    resizer1.chart = chart1;
+    resizer2.chart = chart2;
+
+    for (const resizer of [resizer1, resizer2]) {
+        const chart = resizer.chart;
+        resetResizer(resizer);
+
+        resizer.addEventListener('mousedown', (e) => {
+            isDraggingChartResizer = true;
+            draggingChartResizer = resizer;
+
+            resizer.style.cursor = 'grabbing';
+            const chartResizeFromWidth = chart.options().width;
+            const chartResizeFromHeight = chart.options().height;
+            const rect = resizer.getBoundingClientRect();
+            resizer.deltaX = e.clientX - rect.x;
+            resizer.deltaY = e.clientY - rect.y;
+            resizer.dragStartX = rect.x;
+            resizer.dragStartY = rect.y;
+
+            resizer.onmousemove = (e) => {
+                resizer.style.left = `${e.clientX - resizer.deltaX}px`;
+                resizer.style.top = `${e.clientY - resizer.deltaY}px`;
+                const movedX = e.clientX - resizer.dragStartX - resizer.deltaX;
+                const movedY = e.clientY - resizer.dragStartY - resizer.deltaY;
+                chart.resize(chartResizeFromWidth + movedX, chartResizeFromHeight + movedY);
+            }
+            resizer.onmousemoveBackup = resizer.onmousemove;
+        });
+
+        resizer.addEventListener('mouseup', (e) => {
+            isDraggingChartResizer = false;
+            draggingChartResizer = null;
+            resetResizer(resizer);
+        });
+    }
+
+    // Workaround for dragging too fast and mouse left the resizer while still dragging
+    window.addEventListener('mousemove', (e) => {
+        if (isDraggingChartResizer) {
+            const resizer = draggingChartResizer;
+            resizer.style.left = `${e.clientX - resizer.deltaX}px`;
+            resizer.style.top = `${e.clientY - resizer.deltaY}px`;
+            resizer.onmousemoveBackup(e);
+        }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+        if (isDraggingChartResizer) {
+            isDraggingChartResizer = false;
+            draggingChartResizer = null;
+            resetResizer(draggingChartResizer);
+        }
+    });
+}
+
+
 function resetChart1TimeScale() {
     const time = getCurrentChartTime();
     const coordinate = chart1.timeScale().timeToCoordinate(time - time % 3600);
@@ -1004,6 +1089,7 @@ socket.onopen = function (e) {
     updateAlertPricesTable();
     updateOrdersTable();
     updatePositionsTable();
+    registerChartResizersHandler();
 
     sendInitAction();
     sendSwitchAction(configs.ticker);

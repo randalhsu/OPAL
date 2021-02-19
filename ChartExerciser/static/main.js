@@ -537,7 +537,7 @@ function removeAllAlerts() {
 function createEmptyLi() {
     const li = document.createElement('li');
     li.setAttribute('class', 'list-group-item');
-    li.innerHTML = '(Empty)';
+    li.innerHTML = '<span class="text-muted">(Empty)</span>';
     return li;
 }
 
@@ -869,7 +869,7 @@ function updatePositionsTable() {
     }
     titleLi.innerHTML = `
         <i class="fa fa-rocket" aria-hidden="true"></i>
-        &nbsp;&nbsp;Positions [P/L${totalPLString}]
+        &nbsp;&nbsp;Positions&nbsp;&nbsp;[P/L${totalPLString}]
         <button type="button" class="close" aria-label="Dismiss" title="Dismiss all closed positions"><span aria-hidden="true">&times;</span></button>
     `;
     titleLi.getElementsByTagName('button')[0].onclick = () => removeAllClosedPositions();

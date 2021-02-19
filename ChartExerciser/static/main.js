@@ -2,7 +2,7 @@
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm';
-const DATA_UTC_OFFSET_HOUR = -5  // EST
+const DATA_UTC_OFFSET_HOUR = -5;  // EST
 const DATA_DAILY_OPEN_HOUR = 18;
 
 const DEFAULT_CONFIGS = {
@@ -31,7 +31,7 @@ const configs = { ...DEFAULT_CONFIGS };
 
 
 function getHexColor(s) {
-    const isHexColor = str => /^[0-9A-Fa-f]{6}$/i.test(str);
+    const isHexColor = str => (/^[0-9A-Fa-f]{6}$/i).test(str);
     return (isHexColor(s) ? '#' + s : '#000000');
 }
 
@@ -150,7 +150,6 @@ let fetchedBars = [];
 
 const chartWidth = Math.floor(document.body.clientWidth * 0.95 / 2);
 const chartHeight = Math.floor(chartWidth * 0.8);
-//TODO: resize-able
 
 let chartOptions = {
     width: chartWidth,
@@ -573,7 +572,6 @@ chart1.subscribeCustomPriceLineDragged(customPriceLineDraggedHandler);
 chart2.subscribeCustomPriceLineDragged(customPriceLineDraggedHandler);
 
 
-let alertId = 1;
 let alerts = [];
 
 class Alert {
@@ -583,7 +581,6 @@ class Alert {
         }
         this.type = 'alert';
         this.priceString = priceString;
-        this.id = alertId++;
         this.series1PriceLine = null;
         this.series2PriceLine = null;
     }
@@ -708,7 +705,6 @@ function beep(frequency = 718, type = 'triangle', volume = 0.1, duration = 250) 
 
 
 const DIRECTION_TYPES = ['buy', 'sell'];
-let orderId = 1;
 let orders = [];
 
 class Order {
@@ -718,7 +714,6 @@ class Order {
         }
         this.type = type;
         this.priceString = priceString;
-        this.id = orderId++;
         this.series1PriceLine = null;
         this.series2PriceLine = null;
     }
@@ -978,12 +973,7 @@ function updatePositionsTable() {
                 title = 'Close';
                 fn = closePosition;
             } else {
-                const pl = position.calculatePL();
-                if (pl >= 0) {
-                    class_ = 'list-group-item-success';
-                } else {
-                    class_ = 'list-group-item-danger';
-                }
+                class_ = position.calculatePL() >= 0 ? 'list-group-item-success' : 'list-group-item-danger';
             }
 
             const li = document.createElement('li');

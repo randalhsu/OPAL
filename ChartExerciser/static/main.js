@@ -5,12 +5,139 @@ const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm';
 const DATA_UTC_OFFSET_HOUR = -5  // EST
 const DATA_DAILY_OPEN_HOUR = 18;
 
-const configs = {
-    userUTCOffsetHour: 8,  // if changed, should clear all fetchedBars
+const DEFAULT_CONFIGS = {
+    UTCOffsetHour: '8',  // if changed, should clear all fetchedBars
+    ticker: 'MES',
+    bgColor: '000000',
+    dailyOpenPriceColor: 'CFA600',
+    upColor: '00B061',
+    wickUpColor: '00B061',
+    borderUpColor: '00B061',
+    downColor: 'FF3031',
+    wickDownColor: 'FF3031',
+    borderDownColor: 'FF3031',
 };
 
+const configs = { ...DEFAULT_CONFIGS };
+
+(function updateConfigsFromURL() {
+    const params = (new URL(window.location.href)).searchParams;
+    for (const [key, value] of params) {
+        if (configs.hasOwnProperty(key)) {
+            configs[key] = value;
+        }
+    }
+})();
+
+
+function getHexColor(s) {
+    const isHexColor = str => /^[0-9A-Fa-f]{6}$/i.test(str);
+    return (isHexColor(s) ? '#' + s : '#000000');
+}
+
+(function prepareOptionsModal() {
+
+    function updateNewURLDisplay() {
+        const params = new URLSearchParams();
+        for (const [key, defaultValue] of Object.entries(DEFAULT_CONFIGS)) {
+            if (configs[key] !== defaultValue) {
+                params.append(key, configs[key]);
+            }
+        }
+
+        const paramsString = params.toString();
+        let html = '';
+        if (paramsString) {
+            const url = new URL(document.location.href);
+            const newURL = `${url.origin}${url.pathname}?${paramsString}`;
+            html = `
+                <span class="text-danger">⚠️ Use this link to take effect:</span><br/>
+                <a href="${newURL}">${newURL}</a>
+            `;
+        }
+        document.getElementById('new-url').innerHTML = html;
+    }
+
+    function applyCandleColor(part, hexColorString) {
+        const options = {};
+        options[part] = hexColorString;
+        candleSeries1.applyOptions(options);
+        candleSeries2.applyOptions(options);
+    }
+
+    const UTCTimeOffsetInput = document.getElementById('utc-time-offset');
+    UTCTimeOffsetInput.value = configs.UTCOffsetHour;
+    UTCTimeOffsetInput.addEventListener('change', (event) => {
+        configs.UTCOffsetHour = event.target.value;
+        updateNewURLDisplay();
+    });
+
+    const colorPickerOptions = {
+        preferredFormat: 'hex',
+        showInput: true,
+        showPalette: true,
+        cancelText: 'Cancel',
+        chooseText: 'Choose',
+        palette: [
+            ['#26A69A', '#EF5350', '#03FD04', '#FE0000'],
+            ['#00B061', '#FF3031', '#0EA600', '#FF0000'],
+            ['#FFFFFF', '#252930', '#DDDDDD', '#7E838C'],
+        ],
+    };
+
+    colorPickerOptions.color = getHexColor(configs.bgColor);
+    colorPickerOptions.change = (color) => {
+        configs.bgColor = color.toHex().toUpperCase();
+        const options = { layout: { backgroundColor: color.toHexString() } };
+        chart1.applyOptions(options);
+        chart2.applyOptions(options);
+        updateNewURLDisplay();
+    }
+    $('#color-bg').spectrum(colorPickerOptions);
+
+    colorPickerOptions.color = getHexColor(configs.dailyOpenPriceColor);
+    colorPickerOptions.change = (color) => {
+        configs.dailyOpenPriceColor = color.toHex().toUpperCase();
+        drawDailyOpenPrice();
+        updateNewURLDisplay();
+    }
+    $('#color-dailyOpenPrice').spectrum(colorPickerOptions);
+
+    const mapping = {
+        'upColor': getHexColor(configs.upColor),
+        'wickUpColor': getHexColor(configs.wickUpColor),
+        'borderUpColor': getHexColor(configs.borderUpColor),
+        'downColor': getHexColor(configs.downColor),
+        'wickDownColor': getHexColor(configs.wickDownColor),
+        'borderDownColor': getHexColor(configs.borderDownColor),
+    };
+    for (const [part, configuredColor] of Object.entries(mapping)) {
+        colorPickerOptions.color = configuredColor;
+        colorPickerOptions.change = (color) => {
+            configs[part] = color.toHex().toUpperCase();
+            applyCandleColor(part, color.toHexString());
+            updateNewURLDisplay();
+        }
+        $(`#color-${part}`).spectrum(colorPickerOptions);
+    }
+
+    updateNewURLDisplay();
+
+    // Prevent the trigger button keeps getting focus
+    $('#optionsModal').on('shown.bs.modal', function (e) {
+        $('#options-button').one('focus', function (e) {
+            $(this).blur();
+        });
+    });
+})();
+
+
 function getUTCOffsetHours() {
-    return configs.userUTCOffsetHour - DATA_UTC_OFFSET_HOUR;
+    let UTCOffsetHour = parseInt(configs.UTCOffsetHour);
+    if (isNaN(UTCOffsetHour)) {
+        UTCOffsetHour = DATA_UTC_OFFSET_HOUR;
+    }
+    return UTCOffsetHour - DATA_UTC_OFFSET_HOUR;
 }
 
 function getUTCOffsetSeconds() {
@@ -39,7 +166,7 @@ let chartOptions = {
         dateFormat: 'yyyy-MM-dd',
     },
     layout: {
-        backgroundColor: '#000000',
+        backgroundColor: getHexColor(configs.bgColor),
         textColor: 'rgba(255, 255, 255, 0.9)',
     },
     grid: {
@@ -137,12 +264,12 @@ chart2.subscribeCrosshairMove(crosshair2SyncHandler);
 
 const candleOptions = {
     priceLineVisible: false,
-    upColor: 'rgba(255, 255, 255, 1)',
-    downColor: 'rgba(37, 41, 48, 1)',
-    borderDownColor: 'rgba(126, 131, 140, 1)',
-    borderUpColor: 'rgba(126, 131, 140, 1)',
-    wickDownColor: 'rgba(126, 131, 140, 1)',
-    wickUpColor: 'rgba(126, 131, 140, 1)',
+    upColor: getHexColor(configs.upColor),
+    downColor: getHexColor(configs.downColor),
+    borderDownColor: getHexColor(configs.borderDownColor),
+    borderUpColor: getHexColor(configs.borderUpColor),
+    wickDownColor: getHexColor(configs.wickDownColor),
+    wickUpColor: getHexColor(configs.wickUpColor),
 };
 
 const candleSeries1 = chart1.addCandlestickSeries(candleOptions);
@@ -281,14 +408,16 @@ function drawDailyOpenPrice() {
 
 function attachDailyOpenPriceLineToSeries(series, price) {
     if (series.dailyOpenPriceLine !== undefined) {
-        if (price === series.dailyOpenPriceLine.options().price) {
+        const options = series.dailyOpenPriceLine.options()
+        if (price === options.price &&
+            configs.dailyOpenPriceColor === options.color) {
             return;
         }
         series.removePriceLine(series.dailyOpenPriceLine);
     }
     series.dailyOpenPriceLine = series.createPriceLine({
         price: price,
-        color: 'rgba(207, 166, 0, 1)',
+        color: getHexColor(configs.dailyOpenPriceColor),
         lineWidth: 2,
         lineStyle: LightweightCharts.LineStyle.Solid,
     });
@@ -877,7 +1006,7 @@ socket.onopen = function (e) {
     updatePositionsTable();
 
     sendInitAction();
-    sendSwitchAction('MES');
+    sendSwitchAction(configs.ticker);
 }
 
 socket.onmessage = function (e) {

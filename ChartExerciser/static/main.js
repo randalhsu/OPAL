@@ -201,18 +201,20 @@ let draggingChartResizer = null;
 (function initChartResizersPosition() {
     const resizer1 = document.getElementById('chart1-resizer');
     const resizer2 = document.getElementById('chart2-resizer');
-    resizer1.chartId = 'chart1';
-    resizer2.chartId = 'chart2';
-
-    for (const resizer of [resizer1, resizer2]) {
-        const resizerRect = resizer.getBoundingClientRect();
-        const chartRect = document.getElementById(resizer.chartId).querySelector('.tv-lightweight-charts').getBoundingClientRect();
-        const offsetX = chartRect.right - resizerRect.width;
-        const offsetY = window.scrollY + chartRect.bottom - resizerRect.height;
-        resizer.style.left = `${offsetX}px`;
-        resizer.style.top = `${offsetY}px`;
-    }
+    resizer1.chartEl = document.getElementById('chart1');
+    resizer2.chartEl = document.getElementById('chart2');
+    moveResizerToBottomRightEdgeOfChart(resizer1);
+    moveResizerToBottomRightEdgeOfChart(resizer2);
 })();
+
+function moveResizerToBottomRightEdgeOfChart(resizer) {
+    const resizerRect = resizer.getBoundingClientRect();
+    const chartRect = resizer.chartEl.querySelector('.tv-lightweight-charts').getBoundingClientRect();
+    const offsetX = chartRect.right - resizerRect.width;
+    const offsetY = window.scrollY + chartRect.bottom - resizerRect.height;
+    resizer.style.left = `${offsetX}px`;
+    resizer.style.top = `${offsetY}px`;
+}
 
 function registerChartResizersHandler() {
     const resetResizer = (resizer) => {
@@ -248,6 +250,9 @@ function registerChartResizersHandler() {
                 const movedX = e.clientX - resizer.dragStartX - resizer.deltaX;
                 const movedY = e.clientY - resizer.dragStartY - resizer.deltaY;
                 chart.resize(chartResizeFromWidth + movedX, chartResizeFromHeight + movedY);
+
+                const anotherResizer = resizer === resizer1 ? resizer2 : resizer1;
+                moveResizerToBottomRightEdgeOfChart(anotherResizer);
             }
             resizer.onmousemoveBackup = resizer.onmousemove;
         });

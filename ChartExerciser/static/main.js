@@ -607,7 +607,7 @@ function addAlert(priceString) {
     alerts.push(alert);
 
     updateAlertPricesTable();
-    showMessage(`🔔 ${priceString}`, 1500);
+    showMessage(`🕭 @ ${priceString}`);
 }
 
 function removeAlert(alert) {
@@ -679,7 +679,7 @@ function checkIfAlertTriggered() {
         for (const alert of alerts) {
             const price = +alert.priceString;
             if (low <= price && price <= high) {
-                showMessage(`🔔 ${alert.priceString} triggered!`, 2000);
+                showMessage(`🕭 @ ${alert.priceString} triggered!`);
                 removeAlert(alert);
                 hasTriggeredAlert = true;
             }
@@ -724,8 +724,9 @@ function addOrder(type, priceString) {
         return;
     }
 
+    const price = +priceString;
     const priceLineOptions = {
-        price: +priceString,
+        price: price,
         color: PRICE_LINE_COLOR[type],
         lineStyle: LightweightCharts.LineStyle.Solid,
         draggable: true,
@@ -735,7 +736,12 @@ function addOrder(type, priceString) {
     order.series2PriceLine = candleSeries2.createPriceLine(priceLineOptions);
     orders.push(order);
 
-    showMessage(`Pending ${type} order @ ${priceString}`, 2000);
+    let condition = 'stop';
+    if ((type === 'buy' && price < getLastPrice()) ||
+        (type === 'sell' && price > getLastPrice())) {
+        condition = 'limit';
+    }
+    showMessage(`${type} ${condition} order @ ${priceString}`);
     updateOrdersTable();
 }
 
@@ -790,7 +796,7 @@ function activateOrder(order, triggeredPrice) {
     let hasClosedAPosition = false;
     for (const position of positions) {
         if (position.status === 'running' && isPairingDirections(order, position)) {
-            position.setClosedPrice(triggeredPrice);
+            closePosition(position, triggeredPrice);
             hasClosedAPosition = true;
             break;
         }
@@ -912,11 +918,13 @@ function calculatePositionsTotalPL() {
 
 function openPosition(type, openedPrice) {
     positions.push(new Position(type, openedPrice));
+    showMessage(`Position opened @ ${openedPrice} !`);
 }
 
 function closePosition(position, closedPrice) {
     closedPrice = closedPrice || getLastPrice();
     position.setClosedPrice(closedPrice);
+    showMessage(`Position closed @ ${closedPrice} !`);
     updatePositionsTable();
 }
 
@@ -990,12 +998,27 @@ function updatePositionsTable() {
 }
 
 
-function showMessage(message, timeout = 0) {
-    const el = document.getElementById('message');
-    el.innerText = message;
-    if (timeout > 0) {
-        setTimeout(() => el.innerText = '', timeout);
+const messageQueue = [];
+let isShowingMessage = false;
+
+function showMessage(message, timeout = 2000) {
+    messageQueue.push([message, timeout]);
+    consumeMessageQueue();
+}
+
+function consumeMessageQueue() {
+    if (isShowingMessage || messageQueue.length === 0) {
+        return;
     }
+    const [message, timeout] = messageQueue.shift();
+    const el = document.getElementById('message');
+    el.innerHTML = message;
+    isShowingMessage = true;
+    setTimeout(() => {
+        el.innerText = '';
+        isShowingMessage = false;
+        consumeMessageQueue();
+    }, timeout);
 }
 
 function registerChangeTickerHandler() {
@@ -1128,7 +1151,7 @@ function handleResponse(response) {
             adjustBarTimeByUTCOffset(bar);
 
             if (bar.time == getCurrentChartTime()) {
-                showMessage('Already reached final bar!', 2000);
+                showMessage('⚠️ Already reached final bar!');
                 resetFastForwardStatus();
                 return;
             }
@@ -1243,7 +1266,7 @@ function registerKeyboardEventHandler() {
             case 'ArrowRight':
                 const maxDate = getTickerInfo().maxDate;
                 if (maxDate == getCurrentChartTime()) {
-                    showMessage('Already reached final bar!', 2000);
+                    showMessage('⚠️ Already reached final bar!');
                     return;
                 }
                 sendStepAction();
@@ -1261,7 +1284,7 @@ function registerKeyboardEventHandler() {
 
             case 'ArrowLeft':
                 if (fetchedBars.length <= 1) {
-                    showMessage('Already reached the first bar!', 2000);
+                    showMessage('⚠️ Already reached the first bar!');
                     return;
                 }
                 fetchedBars.pop();

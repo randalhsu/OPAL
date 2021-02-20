@@ -1052,7 +1052,6 @@ function registerChangeTickerHandler() {
 }
 
 function updateDatetimepickerCurrentDatetime(timestamp) {
-    //TODO: locale bug when near final bar
     if (typeof timestamp === 'number') {
         const time = moment.utc(timestamp * 1000);
         $('#datetimepicker1').datetimepicker('date', time);
@@ -1067,9 +1066,8 @@ function updateDatetimepickerRange(ticker) {
     $('#datetimepicker1').datetimepicker('minDate', veryMinDate);
     $('#datetimepicker1').datetimepicker('maxDate', veryMaxDate);
 
-    const localeSecondDiff = new Date().getTimezoneOffset() * 60;
-    const minDate = moment.utc((tickersInfo[ticker].minDate + localeSecondDiff) * 1000);
-    const maxDate = moment.utc((tickersInfo[ticker].maxDate + localeSecondDiff) * 1000);
+    const minDate = moment.utc((tickersInfo[ticker].minDate + getUTCOffsetSeconds()) * 1000);
+    const maxDate = moment.utc((tickersInfo[ticker].maxDate + getUTCOffsetSeconds()) * 1000);
     $('#datetimepicker1').datetimepicker('minDate', minDate);
     $('#datetimepicker1').datetimepicker('maxDate', maxDate);
 }
@@ -1164,7 +1162,7 @@ function handleResponse(response) {
             const bar = response.data[0];
             adjustBarTimeByUTCOffset(bar);
 
-            if (bar.time == getCurrentChartTime()) {
+            if (bar.time === getCurrentChartTime()) {
                 showMessage('⚠️ Already reached final bar!');
                 resetFastForwardStatus();
                 return;

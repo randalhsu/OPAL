@@ -1019,7 +1019,7 @@ function updateDatetimepickerCurrentDatetime(timestamp) {
     if (typeof timestamp === 'number') {
         const time = moment.utc(timestamp * 1000);
         $('#datetimepicker1').datetimepicker('date', time);
-        document.getElementById('weekday').innerText = `[${time.format('ddd')}]`;
+        document.getElementById('weekday').innerText = `${time.format('ddd')}`;
     }
 }
 
@@ -1042,6 +1042,11 @@ const fastForwardStatus = {
     isFastForwarding: false,
     fastForwardedBars: 0,
     LIMIT_N_BARS: 24,
+}
+
+function startFastForwarding() {
+    fastForwardStatus.isFastForwarding = true;
+    sendStepAction();
 }
 
 function resetFastForwardStatus() {
@@ -1079,6 +1084,7 @@ const socket = new WebSocket(`ws://${window.location.host}/socket`);
 socket.onopen = function (e) {
     initDatetimepicker();
     registerChangeTickerHandler();
+    registerForwardButtonsHandler();
     registerKeyboardEventHandler();
     registerFitButtonsHandler();
     updateAlertPricesTable();
@@ -1217,6 +1223,17 @@ function sendGotoAction(timestamp) {
     }));
 }
 
+function registerForwardButtonsHandler() {
+    document.getElementById('step-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+        sendStepAction();
+    });
+
+    document.getElementById('fast-forward-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+        startFastForwarding();
+    });
+}
 
 function registerKeyboardEventHandler() {
     window.addEventListener('keydown', function (event) {
@@ -1239,8 +1256,7 @@ function registerKeyboardEventHandler() {
             case 'KeyF':
                 // Fast forward until triggered any alert, or at most LIMIT_N_BARS,
                 // whichever happens first
-                fastForwardStatus.isFastForwarding = true;
-                sendStepAction();
+                startFastForwarding();
                 break;
 
             case 'ArrowLeft':

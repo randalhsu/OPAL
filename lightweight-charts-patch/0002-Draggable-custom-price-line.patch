@@ -1,0 +1,613 @@
+From 6618f3fc81f1d72064a8a7bfbdefafa4ea516051 Mon Sep 17 00:00:00 2001
+From: Randal <xxx@gmail.com>
+Date: Tue, 16 Feb 2021 11:43:27 +0800
+Subject: [PATCH 2/3] Draggable custom price line
+
+---
+ src/api/chart-api.ts                          |  30 +++-
+ src/api/ichart-api.ts                         |  22 +++
+ src/api/iprice-scale-api.ts                   |   2 +
+ src/api/iseries-api.ts                        |   3 +
+ .../options/price-line-options-defaults.ts    |   1 +
+ src/api/price-scale-api.ts                    |   4 +
+ src/gui/chart-widget.ts                       |  26 ++++
+ src/gui/price-axis-widget.ts                  | 135 ++++++++++++++++--
+ src/model/chart-model.ts                      |  10 ++
+ src/model/custom-price-line.ts                |   4 +
+ src/model/price-line-options.ts               |   1 +
+ src/model/series.ts                           |   4 +
+ 12 files changed, 228 insertions(+), 14 deletions(-)
+
+diff --git a/src/api/chart-api.ts b/src/api/chart-api.ts
+index d95ad9f..7d691e2 100644
+--- a/src/api/chart-api.ts
++++ b/src/api/chart-api.ts
+@@ -1,4 +1,4 @@
+-import { ChartWidget, MouseEventParamsImpl, MouseEventParamsImplSupplier } from '../gui/chart-widget';
++import { ChartWidget, CustomPriceLineDraggedEventParamsImpl, CustomPriceLineDraggedEventParamsImplSupplier, MouseEventParamsImpl, MouseEventParamsImplSupplier } from '../gui/chart-widget';
+ 
+ import { ensureDefined } from '../helpers/assertions';
+ import { Delegate } from '../helpers/delegate';
+@@ -29,7 +29,7 @@ import {
+ import { CandlestickSeriesApi } from './candlestick-series-api';
+ import { DataUpdatesConsumer, SeriesDataItemTypeMap } from './data-consumer';
+ import { DataLayer, DataUpdateResponse, SeriesChanges } from './data-layer';
+-import { IChartApi, MouseEventHandler, MouseEventParams } from './ichart-api';
++import { CustomPriceLineDraggedEventHandler, CustomPriceLineDraggedEventParams, IChartApi, MouseEventHandler, MouseEventParams } from './ichart-api';
+ import { IPriceScaleApi } from './iprice-scale-api';
+ import { ISeriesApi } from './iseries-api';
+ import { ITimeScaleApi } from './itime-scale-api';
+@@ -143,6 +143,7 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+ 
+ 	private readonly _clickedDelegate: Delegate<MouseEventParams> = new Delegate();
+ 	private readonly _crosshairMovedDelegate: Delegate<MouseEventParams> = new Delegate();
++	private readonly _customPriceLineDraggedDelegate: Delegate<CustomPriceLineDraggedEventParams> = new Delegate();
+ 
+ 	private readonly _timeScaleApi: TimeScaleApi;
+ 
+@@ -169,6 +170,14 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+ 			},
+ 			this
+ 		);
++		this._chartWidget.customPriceLineDragged().subscribe(
++			(paramSupplier: CustomPriceLineDraggedEventParamsImplSupplier) => {
++				if (this._customPriceLineDraggedDelegate.hasListeners()) {
++					this._customPriceLineDraggedDelegate.fire(this._convertCustomPriceLineDraggedParams(paramSupplier()));
++				}
++			},
++			this
++		);
+ 
+ 		const model = this._chartWidget.model();
+ 		this._timeScaleApi = new TimeScaleApi(model);
+@@ -185,6 +194,7 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+ 	public remove(): void {
+ 		this._chartWidget.clicked().unsubscribeAll(this);
+ 		this._chartWidget.crosshairMoved().unsubscribeAll(this);
++		this._chartWidget.customPriceLineDragged().unsubscribeAll(this);
+ 
+ 		this._timeScaleApi.destroy();
+ 		this._chartWidget.destroy();
+@@ -194,6 +204,7 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+ 
+ 		this._clickedDelegate.destroy();
+ 		this._crosshairMovedDelegate.destroy();
++		this._customPriceLineDraggedDelegate.destroy();
+ 		this._dataLayer.destroy();
+ 	}
+ 
+@@ -309,6 +320,14 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+ 		this._crosshairMovedDelegate.unsubscribe(handler);
+ 	}
+ 
++	public subscribeCustomPriceLineDragged(handler: CustomPriceLineDraggedEventHandler): void {
++		this._customPriceLineDraggedDelegate.subscribe(handler);
++	}
++
++	public unsubscribeCustomPriceLineDragged(handler: CustomPriceLineDraggedEventHandler): void {
++		this._customPriceLineDraggedDelegate.unsubscribe(handler);
++	}
++
+ 	public priceScale(priceScaleId?: string): IPriceScaleApi {
+ 		if (priceScaleId === undefined) {
+ 			warn('Using ChartApi.priceScale() method without arguments has been deprecated, pass valid price scale id instead');
+@@ -363,4 +382,11 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+ 			seriesPrices,
+ 		};
+ 	}
++
++	private _convertCustomPriceLineDraggedParams(param: CustomPriceLineDraggedEventParamsImpl): CustomPriceLineDraggedEventParams {
++		return {
++			customPriceLine: param.customPriceLine,
++			fromPriceString: param.fromPriceString,
++		};
++	}
+ }
+diff --git a/src/api/ichart-api.ts b/src/api/ichart-api.ts
+index b5d7b26..3c97b76 100644
+--- a/src/api/ichart-api.ts
++++ b/src/api/ichart-api.ts
+@@ -2,6 +2,7 @@ import { DeepPartial } from '../helpers/strict-type-checks';
+ 
+ import { BarPrice, BarPrices } from '../model/bar';
+ import { ChartOptions } from '../model/chart-model';
++import { CustomPriceLine } from '../model/custom-price-line';
+ import { Point } from '../model/point';
+ import { SeriesMarker } from '../model/series-markers';
+ import {
+@@ -29,6 +30,13 @@ export interface MouseEventParams {
+ 
+ export type MouseEventHandler = (param: MouseEventParams) => void;
+ 
++export interface CustomPriceLineDraggedEventParams {
++	customPriceLine: CustomPriceLine;
++	fromPriceString: string;
++}
++
++export type CustomPriceLineDraggedEventHandler = (param: CustomPriceLineDraggedEventParams) => void;
++
+ /*
+  * The main interface of a single chart
+  */
+@@ -123,6 +131,20 @@ export interface IChartApi {
+ 	 */
+ 	unsubscribeCrosshairMove(handler: MouseEventHandler): void;
+ 
++	/**
++	 * Adds a subscription to receive notifications on custom price lines being dragged
++	 *
++	 * @param handler - handler (function) to be called on dragged
++	 */
++	subscribeCustomPriceLineDragged(handler: CustomPriceLineDraggedEventHandler): void;
++
++	/**
++	 * Removes custom price line dragged subscription
++	 *
++	 * @param handler - previously subscribed handler
++	 */
++	unsubscribeCustomPriceLineDragged(handler: CustomPriceLineDraggedEventHandler): void;
++
+ 	/**
+ 	 * Returns API to manipulate the price scale
+ 	 *
+diff --git a/src/api/iprice-scale-api.ts b/src/api/iprice-scale-api.ts
+index 4390cdc..d588655 100644
+--- a/src/api/iprice-scale-api.ts
++++ b/src/api/iprice-scale-api.ts
+@@ -18,6 +18,8 @@ export interface IPriceScaleApi {
+ 	 */
+ 	options(): Readonly<PriceScaleOptions>;
+ 
++	formatPrice(price: number, firstValue: number): string;
++
+ 	/**
+ 	 * Returns a width of the price scale if it's visible or 0 if invisible.
+ 	 */
+diff --git a/src/api/iseries-api.ts b/src/api/iseries-api.ts
+index b857e9c..ef75301 100644
+--- a/src/api/iseries-api.ts
++++ b/src/api/iseries-api.ts
+@@ -1,6 +1,7 @@
+ import { BarPrice } from '../model/bar';
+ import { Coordinate } from '../model/coordinate';
+ import { PriceLineOptions } from '../model/price-line-options';
++import { Series } from '../model/series';
+ import { SeriesMarker } from '../model/series-markers';
+ import {
+ 	SeriesOptionsMap,
+@@ -34,6 +35,8 @@ export interface IPriceFormatter {
+ }
+ 
+ export interface ISeriesApi<TSeriesType extends SeriesType> {
++	series(): Series<TSeriesType>;
++
+ 	/**
+ 	 * Returns current price formatter
+ 	 *
+diff --git a/src/api/options/price-line-options-defaults.ts b/src/api/options/price-line-options-defaults.ts
+index 3d281fe..82f4db8 100644
+--- a/src/api/options/price-line-options-defaults.ts
++++ b/src/api/options/price-line-options-defaults.ts
+@@ -8,4 +8,5 @@ export const priceLineOptionsDefaults: PriceLineOptions = {
+ 	lineWidth: 1,
+ 	axisLabelVisible: true,
+ 	title: '',
++	draggable: false,
+ };
+diff --git a/src/api/price-scale-api.ts b/src/api/price-scale-api.ts
+index 3f3e366..0025d03 100644
+--- a/src/api/price-scale-api.ts
++++ b/src/api/price-scale-api.ts
+@@ -33,6 +33,10 @@ export class PriceScaleApi implements IPriceScaleApi {
+ 		return this._chartWidget.getPriceAxisWidth(this._priceScaleId === DefaultPriceScaleId.Left ? 'left' : 'right');
+ 	}
+ 
++	public formatPrice(price: number, firstValue: number = 0): string {
++		return this._priceScale().formatPrice(price, firstValue);
++	}
++
+ 	private _priceScale(): PriceScale {
+ 		return ensureNotNull(this._chartWidget.model().findPriceScale(this._priceScaleId)).priceScale;
+ 	}
+diff --git a/src/gui/chart-widget.ts b/src/gui/chart-widget.ts
+index 1723174..66207d5 100644
+--- a/src/gui/chart-widget.ts
++++ b/src/gui/chart-widget.ts
+@@ -8,6 +8,7 @@ import { DeepPartial } from '../helpers/strict-type-checks';
+ import { BarPrice, BarPrices } from '../model/bar';
+ import { ChartModel, ChartOptionsInternal } from '../model/chart-model';
+ import { Coordinate } from '../model/coordinate';
++import { CustomPriceLine } from '../model/custom-price-line';
+ import {
+ 	InvalidateMask,
+ 	InvalidationLevel,
+@@ -34,6 +35,13 @@ export interface MouseEventParamsImpl {
+ 
+ export type MouseEventParamsImplSupplier = () => MouseEventParamsImpl;
+ 
++export interface CustomPriceLineDraggedEventParamsImpl {
++	customPriceLine: CustomPriceLine;
++	fromPriceString: string;
++}
++
++export type CustomPriceLineDraggedEventParamsImplSupplier = () => CustomPriceLineDraggedEventParamsImpl;
++
+ export class ChartWidget implements IDestroyable {
+ 	private readonly _options: ChartOptionsInternal;
+ 	private _paneWidgets: PaneWidget[] = [];
+@@ -51,6 +59,7 @@ export class ChartWidget implements IDestroyable {
+ 	private _drawPlanned: boolean = false;
+ 	private _clicked: Delegate<MouseEventParamsImplSupplier> = new Delegate();
+ 	private _crosshairMoved: Delegate<MouseEventParamsImplSupplier> = new Delegate();
++	private _customPriceLineDragged: Delegate<CustomPriceLineDraggedEventParamsImplSupplier> = new Delegate();
+ 	private _onWheelBound: (event: WheelEvent) => void;
+ 
+ 	public constructor(container: HTMLElement, options: ChartOptionsInternal) {
+@@ -75,6 +84,7 @@ export class ChartWidget implements IDestroyable {
+ 			this._options
+ 		);
+ 		this.model().crosshairMoved().subscribe(this._onPaneWidgetCrosshairMoved.bind(this), this);
++		this.model().customPriceLineDragged().subscribe(this._onCustomPriceLineDragged.bind(this), this);
+ 
+ 		this._timeAxisWidget = new TimeAxisWidget(this);
+ 		this._tableElement.appendChild(this._timeAxisWidget.getElement());
+@@ -130,6 +140,7 @@ export class ChartWidget implements IDestroyable {
+ 		}
+ 
+ 		this._model.crosshairMoved().unsubscribeAll(this);
++		this._model.customPriceLineDragged().unsubscribeAll(this);
+ 		this._model.timeScale().optionsApplied().unsubscribeAll(this);
+ 		this._model.priceScalesOptionsChanged().unsubscribeAll(this);
+ 		this._model.destroy();
+@@ -210,6 +221,10 @@ export class ChartWidget implements IDestroyable {
+ 		return this._crosshairMoved;
+ 	}
+ 
++	public customPriceLineDragged(): ISubscription<CustomPriceLineDraggedEventParamsImplSupplier> {
++		return this._customPriceLineDragged;
++	}
++
+ 	public takeScreenshot(): HTMLCanvasElement {
+ 		if (this._invalidateMask !== null) {
+ 			this._drawImpl(this._invalidateMask);
+@@ -613,6 +628,13 @@ export class ChartWidget implements IDestroyable {
+ 		};
+ 	}
+ 
++	private _getCustomPriceLineDraggedEventParamsImpl(customPriceLine: CustomPriceLine, fromPriceString: string): CustomPriceLineDraggedEventParamsImpl {
++		return {
++			customPriceLine: customPriceLine,
++			fromPriceString: fromPriceString,
++		};
++	}
++
+ 	private _onPaneWidgetClicked(time: TimePointIndex | null, point: Point): void {
+ 		this._clicked.fire(() => this._getMouseEventParamsImpl(time, point));
+ 	}
+@@ -621,6 +643,10 @@ export class ChartWidget implements IDestroyable {
+ 		this._crosshairMoved.fire(() => this._getMouseEventParamsImpl(time, point));
+ 	}
+ 
++	private _onCustomPriceLineDragged(customPriceLine: CustomPriceLine, fromPriceString: string): void {
++		this._customPriceLineDragged.fire(() => this._getCustomPriceLineDraggedEventParamsImpl(customPriceLine, fromPriceString));
++	}
++
+ 	private _updateTimeAxisVisibility(): void {
+ 		const display = this._options.timeScale.visible ? '' : 'none';
+ 		this._timeAxisWidget.getElement().style.display = display;
+diff --git a/src/gui/price-axis-widget.ts b/src/gui/price-axis-widget.ts
+index 8c4d2c3..f962dd1 100644
+--- a/src/gui/price-axis-widget.ts
++++ b/src/gui/price-axis-widget.ts
+@@ -6,12 +6,14 @@ import { IDestroyable } from '../helpers/idestroyable';
+ import { makeFont } from '../helpers/make-font';
+ 
+ import { Coordinate } from '../model/coordinate';
++import { CustomPriceLine } from '../model/custom-price-line';
+ import { IDataSource } from '../model/idata-source';
+ import { InvalidationLevel } from '../model/invalidate-mask';
+ import { IPriceDataSource } from '../model/iprice-data-source';
+ import { LayoutOptions } from '../model/layout-options';
+ import { PriceScalePosition } from '../model/pane';
+ import { PriceScale } from '../model/price-scale';
++import { Series } from '../model/series';
+ import { TextWidthCache } from '../model/text-width-cache';
+ import { PriceAxisViewRendererOptions } from '../renderers/iprice-axis-view-renderer';
+ import { PriceAxisRendererOptionsProvider } from '../renderers/price-axis-renderer-options-provider';
+@@ -27,6 +29,8 @@ export type PriceAxisWidgetSide = Exclude<PriceScalePosition, 'overlay'>;
+ const enum CursorType {
+ 	Default,
+ 	NsResize,
++	Grab,
++	Grabbing,
+ }
+ 
+ type IPriceAxisViewArray = readonly IPriceAxisView[];
+@@ -48,6 +52,8 @@ export class PriceAxisWidget implements IDestroyable {
+ 	private _updateTimeout: TimerId | null = null;
+ 	private _mouseEventHandler: MouseEventHandler;
+ 	private _mousedown: boolean = false;
++	private _mouseDraggingCustomPriceLine: CustomPriceLine | null = null;
++	private _mouseDragFromPriceString: string = '';
+ 
+ 	private readonly _widthCache: TextWidthCache = new TextWidthCache(50);
+ 	private _tickMarksCache: LabelsImageCache = new LabelsImageCache(11, '#000');
+@@ -86,6 +92,7 @@ export class PriceAxisWidget implements IDestroyable {
+ 		topCanvas.style.top = '0';
+ 
+ 		const handler: MouseEventHandlers = {
++			mouseMoveEvent: this._mouseMoveEvent.bind(this),
+ 			mouseDownEvent: this._mouseDownEvent.bind(this),
+ 			pressedMouseMoveEvent: this._pressedMouseMoveEvent.bind(this),
+ 			mouseDownOutsideEvent: this._mouseDownOutsideEvent.bind(this),
+@@ -283,54 +290,139 @@ export class PriceAxisWidget implements IDestroyable {
+ 		return this._canvasBinding.canvas;
+ 	}
+ 
++	private _getDraggableCustomPriceLines(): CustomPriceLine[] {
++		const lines: CustomPriceLine[] = [];
++
++		for (const source of this._pane.state().orderedSources()) {
++			if (source instanceof Series) {
++				lines.push(...source.customPriceLines().filter(
++					(line: CustomPriceLine) => line.options().draggable && line.priceAxisView().isAxisLabelVisible()
++				));
++			}
++		}
++
++		return lines;
++	}
++
++	private _mouseHoveredCustomPriceLine(y: number): CustomPriceLine | null {
++		const rendererOptions = this.rendererOptions();
++
++		for (const customPriceLine of this._getDraggableCustomPriceLines()) {
++			const view = customPriceLine.priceAxisView();
++			const height = view.height(rendererOptions, false);
++			const fixedCoordinate = view.getFixedCoordinate();
++			if (fixedCoordinate - height / 2 <= y && y <= fixedCoordinate + height / 2) {
++				return customPriceLine;
++			}
++		}
++		return null;
++	}
++
++	private _mouseMoveEvent(e: TouchMouseEvent): void {
++		if (this._mouseHoveredCustomPriceLine(e.localY as Coordinate) !== null) {
++			this._setCursor(CursorType.Grab);
++		} else {
++			this._setCursor(CursorType.NsResize);
++		}
++	}
++
+ 	private _mouseDownEvent(e: TouchMouseEvent): void {
+-		if (this._priceScale === null || this._priceScale.isEmpty() || !this._pane.chart().options().handleScale.axisPressedMouseMove.price) {
++		if (this._priceScale === null || this._priceScale.isEmpty()) {
++			return;
++		}
++
++		this._mousedown = true;
++
++		const hoveredCustomPriceLine = this._mouseHoveredCustomPriceLine(e.localY as Coordinate);
++		if (hoveredCustomPriceLine) {
++			this._mouseDraggingCustomPriceLine = hoveredCustomPriceLine;
++			const price = hoveredCustomPriceLine.options().price;
++			const firstValue = ensureNotNull(this._priceScale.firstValue());
++			this._mouseDragFromPriceString = this._priceScale.formatPrice(price, firstValue);
++			this._setCursor(CursorType.Grabbing);
++			return;
++		}
++
++		if (!this._pane.chart().options().handleScale.axisPressedMouseMove.price) {
+ 			return;
+ 		}
+ 
+ 		const model = this._pane.chart().model();
+ 		const pane = this._pane.state();
+-		this._mousedown = true;
+ 		model.startScalePrice(pane, this._priceScale, e.localY as Coordinate);
+ 	}
+ 
+ 	private _pressedMouseMoveEvent(e: TouchMouseEvent): void {
+-		if (this._priceScale === null || !this._pane.chart().options().handleScale.axisPressedMouseMove.price) {
++		if (this._priceScale === null) {
++			return;
++		}
++
++		const priceScale = this._priceScale;
++		if (this._mouseDraggingCustomPriceLine) {
++			const firstValue = ensureNotNull(priceScale.firstValue());
++			const price = priceScale.coordinateToPrice(e.localY as Coordinate, firstValue);
++			this._mouseDraggingCustomPriceLine.applyOptions({ price: price });
++			return;
++		}
++
++		if (!this._pane.chart().options().handleScale.axisPressedMouseMove.price) {
+ 			return;
+ 		}
+ 
+ 		const model = this._pane.chart().model();
+ 		const pane = this._pane.state();
+-		const priceScale = this._priceScale;
+ 		model.scalePriceTo(pane, priceScale, e.localY as Coordinate);
+ 	}
+ 
+ 	private _mouseDownOutsideEvent(): void {
+-		if (this._priceScale === null || !this._pane.chart().options().handleScale.axisPressedMouseMove.price) {
++		if (this._priceScale === null) {
+ 			return;
+ 		}
+ 
+-		const model = this._pane.chart().model();
+-		const pane = this._pane.state();
+-
+-		const priceScale = this._priceScale;
+ 		if (this._mousedown) {
+ 			this._mousedown = false;
++			this._mouseDraggingCustomPriceLine = null;
++			this._mouseDragFromPriceString = '';
++
++			if (!this._pane.chart().options().handleScale.axisPressedMouseMove.price) {
++				return;
++			}
++			const model = this._pane.chart().model();
++			const pane = this._pane.state();
++			const priceScale = this._priceScale;
+ 			model.endScalePrice(pane, priceScale);
+ 		}
+ 	}
+ 
+ 	private _mouseUpEvent(e: TouchMouseEvent): void {
+-		if (this._priceScale === null || !this._pane.chart().options().handleScale.axisPressedMouseMove.price) {
++		if (this._priceScale === null) {
+ 			return;
+ 		}
++
+ 		const model = this._pane.chart().model();
+-		const pane = this._pane.state();
+ 		this._mousedown = false;
++
++		if (this._mouseDraggingCustomPriceLine) {
++			model.fireCustomPriceLineDragged(this._mouseDraggingCustomPriceLine, this._mouseDragFromPriceString);
++			this._mouseDraggingCustomPriceLine = null;
++			this._mouseDragFromPriceString = '';
++			this._setCursor(CursorType.Grab);
++			return;
++		}
++
++		if (!this._pane.chart().options().handleScale.axisPressedMouseMove.price) {
++			return;
++		}
++
++		const pane = this._pane.state();
+ 		model.endScalePrice(pane, this._priceScale);
+ 	}
+ 
+ 	private _mouseDoubleClickEvent(e: TouchMouseEvent): void {
++		if (this._mouseHoveredCustomPriceLine(e.localY as Coordinate) !== null) {
++			return;
++		}
++
+ 		if (this._pane.chart().options().handleScale.axisDoubleClickReset) {
+ 			this.reset();
+ 		}
+@@ -341,6 +433,16 @@ export class PriceAxisWidget implements IDestroyable {
+ 			return;
+ 		}
+ 
++		if (this._mouseDraggingCustomPriceLine !== null) {
++			this._setCursor(CursorType.Grabbing);
++			return;
++		}
++
++		if (this._mouseHoveredCustomPriceLine(e.localY as Coordinate) !== null) {
++			this._setCursor(CursorType.Grab);
++			return;
++		}
++
+ 		const model = this._pane.chart().model();
+ 		if (model.options().handleScale.axisPressedMouseMove.price && !this._priceScale.isPercentage() && !this._priceScale.isIndexedTo100()) {
+ 			this._setCursor(CursorType.NsResize);
+@@ -601,7 +703,16 @@ export class PriceAxisWidget implements IDestroyable {
+ 	}
+ 
+ 	private _setCursor(type: CursorType): void {
+-		this._cell.style.cursor = type === CursorType.NsResize ? 'ns-resize' : 'default';
++		let cursor = 'default';
++
++		if (type === CursorType.NsResize) {
++			cursor = 'ns-resize';
++		} else if (type === CursorType.Grab) {
++			cursor = 'grab';
++		} else if (type === CursorType.Grabbing) {
++			cursor = 'grabbing';
++		}
++		this._cell.style.cursor = cursor;
+ 	}
+ 
+ 	private _onMarksChanged(): void {
+diff --git a/src/model/chart-model.ts b/src/model/chart-model.ts
+index 218dc53..932bb66 100644
+--- a/src/model/chart-model.ts
++++ b/src/model/chart-model.ts
+@@ -11,6 +11,7 @@ import { PriceAxisRendererOptionsProvider } from '../renderers/price-axis-render
+ 
+ import { Coordinate } from './coordinate';
+ import { Crosshair, CrosshairOptions } from './crosshair';
++import { CustomPriceLine } from './custom-price-line';
+ import { DefaultPriceScaleId, isDefaultPriceScale } from './default-price-scale';
+ import { GridOptions } from './grid';
+ import { InvalidateMask, InvalidationLevel } from './invalidate-mask';
+@@ -140,6 +141,7 @@ export class ChartModel implements IDestroyable {
+ 	private _hoveredSource: HoveredSource | null = null;
+ 	private readonly _priceScalesOptionsChanged: Delegate = new Delegate();
+ 	private _crosshairMoved: Delegate<TimePointIndex | null, Point | null> = new Delegate();
++	private _customPriceLineDragged: Delegate<CustomPriceLine, string> = new Delegate();
+ 
+ 	public constructor(invalidateHandler: InvalidateHandler, options: ChartOptionsInternal) {
+ 		this._invalidateHandler = invalidateHandler;
+@@ -256,6 +258,10 @@ export class ChartModel implements IDestroyable {
+ 		return this._crosshairMoved;
+ 	}
+ 
++	public customPriceLineDragged(): ISubscription<CustomPriceLine, string> {
++		return this._customPriceLineDragged;
++	}
++
+ 	public setPaneHeight(pane: Pane, height: number): void {
+ 		pane.setHeight(height);
+ 		this.recalculateAllPanes();
+@@ -520,6 +526,10 @@ export class ChartModel implements IDestroyable {
+ 		this.updateCrosshair();
+ 	}
+ 
++	public fireCustomPriceLineDragged(customPriceLine: CustomPriceLine, fromPriceString: string): void {
++		this._customPriceLineDragged.fire(customPriceLine, fromPriceString);
++	}
++
+ 	public destroy(): void {
+ 		this._panes.forEach((p: Pane) => p.destroy());
+ 		this._panes.length = 0;
+diff --git a/src/model/custom-price-line.ts b/src/model/custom-price-line.ts
+index dc866a3..39427d6 100644
+--- a/src/model/custom-price-line.ts
++++ b/src/model/custom-price-line.ts
+@@ -35,6 +35,10 @@ export class CustomPriceLine {
+ 		return this._options;
+ 	}
+ 
++	public series(): Series {
++		return this._series;
++	}
++
+ 	public paneViews(): readonly IPaneView[] {
+ 		return [
+ 			this._priceLineView,
+diff --git a/src/model/price-line-options.ts b/src/model/price-line-options.ts
+index 912d3ab..490d778 100644
+--- a/src/model/price-line-options.ts
++++ b/src/model/price-line-options.ts
+@@ -7,4 +7,5 @@ export interface PriceLineOptions {
+ 	lineStyle: LineStyle;
+ 	axisLabelVisible: boolean;
+ 	title: string;
++	draggable: boolean;
+ }
+diff --git a/src/model/series.ts b/src/model/series.ts
+index 8cf8442..c522365 100644
+--- a/src/model/series.ts
++++ b/src/model/series.ts
+@@ -301,6 +301,10 @@ export class Series<T extends SeriesType = SeriesType> extends PriceDataSource i
+ 		this.model().updateSource(this);
+ 	}
+ 
++	public customPriceLines(): CustomPriceLine[] {
++		return this._customPriceLines;
++	}
++
+ 	public seriesType(): T {
+ 		return this._seriesType;
+ 	}
+-- 
+2.29.0.windows.1
+

@@ -1,0 +1,26 @@
+From d895c2f95f10ea7f15573279da96def62c2cff90 Mon Sep 17 00:00:00 2001
+From: Randal <xxx@gmail.com>
+Date: Sat, 20 Feb 2021 16:55:51 +0800
+Subject: [PATCH 3/3] Update chart options after resize
+
+---
+ src/gui/chart-widget.ts | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/gui/chart-widget.ts b/src/gui/chart-widget.ts
+index 66207d5..7a57ffb 100644
+--- a/src/gui/chart-widget.ts
++++ b/src/gui/chart-widget.ts
+@@ -189,6 +189,9 @@ export class ChartWidget implements IDestroyable {
+ 		} else {
+ 			this._model.fullUpdate();
+ 		}
++
++		this._options.width = width;
++		this._options.height = height;
+ 	}
+ 
+ 	public paint(invalidateMask?: InvalidateMask): void {
+-- 
+2.29.0.windows.1
+

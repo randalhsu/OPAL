@@ -9,6 +9,7 @@ const DEFAULT_CONFIGS = {
     UTCOffsetHour: '8',  // if changed, should clear all fetchedBars
     ticker: 'MES',
     bgColor: '000000',
+    axesTextColor: 'FFFFFF',
     dailyOpenPriceColor: 'CFA600',
     upColor: '00B061',
     wickUpColor: '00B061',
@@ -52,7 +53,7 @@ function getHexColor(s) {
             const newURL = `${url.origin}${url.pathname}?${paramsString}`;
             html = `
                 <span class="text-danger">⚠️ Use this link to take effect:</span><br/>
-                <a href="${newURL}">${newURL}</a>
+                <a href="${newURL}" target="_blank">${newURL}</a> <i class="fa fa-external-link" aria-hidden="true"></i>
             `;
         }
         document.getElementById('new-url').innerHTML = html;
@@ -95,6 +96,16 @@ function getHexColor(s) {
     }
     $('#color-bg').spectrum(colorPickerOptions);
 
+    colorPickerOptions.color = getHexColor(configs.axesTextColor);
+    colorPickerOptions.change = (color) => {
+        configs.axesTextColor = color.toHex().toUpperCase();
+        const options = { layout: { textColor: color.toHexString() } };
+        chart1.applyOptions(options);
+        chart2.applyOptions(options);
+        updateNewURLDisplay();
+    }
+    $('#color-axes-text').spectrum(colorPickerOptions);
+
     colorPickerOptions.color = getHexColor(configs.dailyOpenPriceColor);
     colorPickerOptions.change = (color) => {
         configs.dailyOpenPriceColor = color.toHex().toUpperCase();
@@ -128,6 +139,9 @@ function getHexColor(s) {
         $('#options-button').one('focus', function (e) {
             $(this).blur();
         });
+    });
+    document.getElementById('options-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
     });
 })();
 
@@ -166,7 +180,7 @@ let chartOptions = {
     },
     layout: {
         backgroundColor: getHexColor(configs.bgColor),
-        textColor: 'rgba(255, 255, 255, 0.9)',
+        textColor: getHexColor(configs.axesTextColor),
     },
     grid: {
         vertLines: {

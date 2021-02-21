@@ -649,10 +649,10 @@ function updateAlertPricesTable() {
     }
 
     const titleLi = document.createElement('li');
-    titleLi.setAttribute('class', 'list-group-item list-group-item-info');
+    titleLi.setAttribute('class', 'list-group-item list-group-item-info d-flex');
     titleLi.innerHTML = `
-        <i class="fa fa-bell" aria-hidden="true"></i>
-        &nbsp;&nbsp;Alert Prices
+        <span class="mr-3 align-middle"><i class="fa fa-bell" aria-hidden="true"></i></span>
+        <span class="mr-2 flex-grow-1 text-nowrap">Alert Prices</span>
         <button type="button" class="close" aria-label="Remove" title="Remove all alerts"><span aria-hidden="true">&times;</span></button>
     `;
     titleLi.getElementsByTagName('button')[0].onclick = () => removeAllAlerts();
@@ -755,7 +755,7 @@ function addOrder(type, priceString) {
         (type === 'sell' && price > getLastPrice())) {
         condition = 'limit';
     }
-    showMessage(`${type} ${condition} order @ ${priceString}`);
+    showMessage(`<span class="text-capitalize">${type}</span>&nbsp;${condition} order @ ${priceString}`);
     updateOrdersTable();
 }
 
@@ -828,10 +828,11 @@ function updateOrdersTable() {
     }
 
     const titleLi = document.createElement('li');
-    titleLi.setAttribute('class', 'list-group-item list-group-item-info');
+    titleLi.setAttribute('class', 'list-group-item list-group-item-info d-flex');
     titleLi.innerHTML = `
-        <i class="fa fa-book" aria-hidden="true"></i>
-        &nbsp;&nbsp;Orders&nbsp;&nbsp;[Distance]
+        <span class="mr-3 align-middle"><i class="fa fa-book" aria-hidden="true"></i></span>
+        <span class="mr-2 flex-grow-1 text-nowrap">Orders</span>
+        <span class="mr-2 text-nowrap">[ Distance ]</span>
         <button type="button" class="close" aria-label="Remove" title="Remove all orders"><span aria-hidden="true">&times;</span></button>
     `;
     titleLi.getElementsByTagName('button')[0].onclick = () => removeAllOrders();
@@ -846,7 +847,7 @@ function updateOrdersTable() {
 
         for (const order of orders) {
             const li = document.createElement('li');
-            li.setAttribute('class', 'list-group-item');
+            li.setAttribute('class', 'list-group-item d-flex');
             if (order.type === 'buy') {
                 li.classList.add('list-group-item-success');
             } else {
@@ -856,10 +857,11 @@ function updateOrdersTable() {
             let distanceTicks = Math.floor((lastPrice - orderPrice) / tickerInfo.minMove);
             const arrow = distanceTicks > 0 ? '🡶' : distanceTicks < 0 ? '🡵' : '🡲';
             distanceTicks = Math.abs(distanceTicks);
-            const distanceDollars = (distanceTicks * tickerInfo.tickValue).toFixed(tickerInfo.precision);
+            const distanceDollars = convertDollarsToString(distanceTicks * tickerInfo.tickValue);
 
             li.innerHTML = `
-                ${order.type} @ ${order.priceString}&nbsp;&nbsp[${arrow} ${distanceTicks} ticks / $${distanceDollars}]
+                <span class="mr-2 flex-grow-1 text-capitalize text-nowrap">${order.type} @ ${order.priceString}</span>
+                <span class="mr-2 text-nowrap">[ ${arrow} ${distanceTicks} ticks / $${distanceDollars} ]</span>
                 <button type="button" class="close" aria-label="Remove" title="Remove order"><span aria-hidden="true">&times;</span></button>
             `;
             li.getElementsByTagName('button')[0].onclick = () => removeOrder(order);
@@ -871,10 +873,15 @@ function updateOrdersTable() {
 
 function convertPriceToString(price, precision) {
     precision = precision || getTickerInfo().precision;
-    if (price >= 0) {
-        return price.toFixed(precision);
+    return price.toFixed(precision);
+}
+
+function convertDollarsToString(dollars, precision) {
+    precision = precision || getTickerInfo().tickValuePrecision;
+    if (dollars >= 0) {
+        return dollars.toFixed(precision);
     }
-    return `(${Math.abs(price).toFixed(precision)})`;
+    return `(${Math.abs(dollars).toFixed(precision)})`;
 }
 
 let positionId = 1;
@@ -908,6 +915,9 @@ class Position {
         }
         return steps * tickerInfo.tickValue;
     }
+    toPLString() {
+        return `$${convertDollarsToString(this.calculatePL())}`;
+    }
     toString() {
         const openedPrice = convertPriceToString(this.openedPrice);
         let closedPrice = '';
@@ -920,9 +930,7 @@ class Position {
             }
             closedPrice = ` ${arrow} ${convertPriceToString(this.closedPrice)}`;
         }
-        let pl = this.calculatePL();
-        pl = convertPriceToString(pl);
-        return `${this.type} @ ${openedPrice}${closedPrice}&nbsp;&nbsp;[$${pl}]`;
+        return `${this.type} @ ${openedPrice}${closedPrice}`;
     }
 }
 
@@ -968,15 +976,16 @@ function updatePositionsTable() {
     }
 
     const titleLi = document.createElement('li');
-    titleLi.setAttribute('class', 'list-group-item list-group-item-info');
+    titleLi.setAttribute('class', 'list-group-item list-group-item-info d-flex');
     let totalPLString = '';
     if (positions.length > 0) {
         const totalPL = calculatePositionsTotalPL();
-        totalPLString = `: $${convertPriceToString(totalPL)}`;
+        totalPLString = `: $${convertDollarsToString(totalPL)}`;
     }
     titleLi.innerHTML = `
-        <i class="fa fa-rocket" aria-hidden="true"></i>
-        &nbsp;&nbsp;Positions&nbsp;&nbsp;[P/L${totalPLString}]
+        <span class="mr-3 align-middle"><i class="fa fa-rocket" aria-hidden="true"></i></span>
+        <span class="mr-2 flex-grow-1 text-nowrap">Positions</span>
+        <span class="mr-2 text-nowrap">[ P/L${totalPLString} ]</span>
         <button type="button" class="close" aria-label="Dismiss" title="Dismiss all closed positions"><span aria-hidden="true">&times;</span></button>
     `;
     titleLi.getElementsByTagName('button')[0].onclick = () => removeAllClosedPositions();
@@ -999,10 +1008,11 @@ function updatePositionsTable() {
             }
 
             const li = document.createElement('li');
-            li.setAttribute('class', 'list-group-item');
+            li.setAttribute('class', 'list-group-item d-flex');
             li.classList.add(class_);
             li.innerHTML = `
-                ${position}
+                <span class="mr-2 flex-grow-1 text-capitalize text-nowrap">${position}</span>
+                <span class="mr-2 text-nowrap">[ ${position.toPLString()} ]</span>
                 <button type="button" class="close" aria-label="${title}" title="${title} position"><span aria-hidden="true">&times;</span></button>
             `;
             li.getElementsByTagName('button')[0].onclick = () => fn(position);
@@ -1044,8 +1054,8 @@ function registerChangeTickerHandler() {
             const currentTicker = currentTickerNode.innerText;
             if (ticker !== currentTicker) {
                 fetchedBars = [];
-                sendSwitchAction(ticker);
                 currentTickerNode.innerText = ticker;
+                sendSwitchAction(ticker);
             }
         }
     }
@@ -1182,7 +1192,8 @@ function handleResponse(response) {
             break;
 
         case 'stepback':
-            // do nothing
+            updateOrdersTable();
+            updatePositionsTable();
             break;
 
         case 'switch':

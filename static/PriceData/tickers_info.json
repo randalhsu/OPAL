@@ -2,31 +2,37 @@
     "ES": {
         "precision": 2,
         "minMove": 0.25,
-        "tickValue": 12.5
+        "tickValue": 12.5,
+        "tickValuePrecision": 1
     },
     "MES": {
         "precision": 2,
         "minMove": 0.25,
-        "tickValue": 1.25
+        "tickValue": 1.25,
+        "tickValuePrecision": 2
     },
     "NQ": {
         "precision": 2,
         "minMove": 0.25,
-        "tickValue": 5.0
+        "tickValue": 5,
+        "tickValuePrecision": 0
     },
     "MNQ": {
         "precision": 2,
         "minMove": 0.25,
-        "tickValue": 0.5
+        "tickValue": 0.5,
+        "tickValuePrecision": 1
     },
     "CL": {
         "precision": 2,
         "minMove": 0.01,
-        "tickValue": 10.0
+        "tickValue": 10,
+        "tickValuePrecision": 0
     },
     "GC": {
         "precision": 1,
         "minMove": 0.1,
-        "tickValue": 10.0
+        "tickValue": 10,
+        "tickValuePrecision": 0
     }
 }

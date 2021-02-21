@@ -163,7 +163,7 @@ let fetchedBars = [];
 
 
 const chartWidth = Math.floor(document.body.clientWidth * 0.95 / 2);
-const chartHeight = Math.floor(chartWidth * 0.8);
+const chartHeight = Math.floor(chartWidth * 0.7);
 
 let chartOptions = {
     width: chartWidth,
@@ -1160,8 +1160,13 @@ socket.onmessage = function (e) {
 }
 
 function handleResponse(response) {
-    let hourlyBars;
     //console.log(response);
+    if (response.hasOwnProperty('error')) {
+        showMessage('⚠ SERVER ERROR: ' + response.error);
+        return;
+    }
+    let hourlyBars;
+
     switch (response.action) {
         case 'init':
             tickersInfo = response.data;
@@ -1220,6 +1225,7 @@ function handleResponse(response) {
             });
 
             if (response.action === 'switch') {
+                document.getElementById('current-ticker').innerText = ticker;
                 updateDatetimepickerRange(ticker);
                 resetChart1TimeScale();
             }

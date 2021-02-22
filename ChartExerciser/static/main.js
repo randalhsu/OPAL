@@ -66,9 +66,23 @@ function getHexColor(s) {
         candleSeries2.applyOptions(options);
     }
 
-    const UTCTimeOffsetInput = document.getElementById('utc-time-offset');
-    UTCTimeOffsetInput.value = configs.UTCOffsetHour;
-    UTCTimeOffsetInput.addEventListener('change', (event) => {
+    const defaultTickerSelect = document.getElementById('default-ticker-select');
+    defaultTickerSelect.value = configs.ticker;
+    defaultTickerSelect.addEventListener('change', (event) => {
+        configs.ticker = event.target.value;
+        updateNewURLDisplay();
+    });
+
+    const UTCTimeOffsetSelect = document.getElementById('utc-time-offset');
+    for (let offset = 14; offset >= -12; --offset) {
+        const s = offset.toString();
+        const option = document.createElement('option');
+        option.value = s;
+        option.innerText = offset > 0 ? '+' + s : s;
+        UTCTimeOffsetSelect.appendChild(option);
+    }
+    UTCTimeOffsetSelect.value = configs.UTCOffsetHour;
+    UTCTimeOffsetSelect.addEventListener('change', (event) => {
         configs.UTCOffsetHour = event.target.value;
         updateNewURLDisplay();
     });
@@ -195,7 +209,6 @@ let chartOptions = {
     },
     timeScale: {
         rightOffset: 2,
-        lockVisibleTimeRangeOnResize: true,
         rightBarStaysOnScroll: true,
         borderColor: 'rgba(197, 203, 206, 0.8)',
         timeVisible: true,
@@ -1138,7 +1151,6 @@ socket.onopen = function (e) {
     registerChartResizersHandler();
 
     sendInitAction();
-    sendSwitchAction(configs.ticker);
 }
 
 socket.onmessage = function (e) {
@@ -1170,6 +1182,7 @@ function handleResponse(response) {
     switch (response.action) {
         case 'init':
             tickersInfo = response.data;
+            sendSwitchAction(configs.ticker);
             return;
             break;
 

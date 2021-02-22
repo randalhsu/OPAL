@@ -34,7 +34,7 @@
       {% endfor %}
     </div>
   </div>
-  <p class="mx-3 d-inline-flex font-weight-bold" id="current-ticker">MES</p>
+  <p class="mx-3 d-inline-flex font-weight-bold" id="current-ticker"></p>
   <div class="form-group d-inline-flex">
     <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
     <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker1" id="datetimepicker-input"/>
@@ -91,16 +91,28 @@
       <div class="modal-body">
         <div class="container-fluid">
           <div class="row my-1">
-            <div class="col">UTC time offset:</div>
-            <div class="col"><input id="utc-time-offset" type="number" step="1" min="-12" max="14" class="w-50"/></div>
-            <div class="col">Daily open price:</div>
-            <div class="col"><input type="text" id="color-dailyOpenPrice"/></div>
+            <div class="col"><label for="default-ticker-select">Default ticker:</label></div>
+            <div class="col">
+              <select id="default-ticker-select" class="w-50">
+                {% for ticker in tickers %}
+                <option value="{{ ticker }}">{{ ticker }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col"><label for="utc-time-offset">UTC time offset:</label></div>
+            <div class="col"><select id="utc-time-offset" class="w-50"></select></div>
           </div>
-          <div class="row my-4">
+          <div class="row mt-4">
             <div class="col">Background:</div>
             <div class="col"><input type="text" id="color-bg"/></div>
             <div class="col">Axes text:</div>
             <div class="col"><input type="text" id="color-axes-text"/></div>
+          </div>
+          <div class="row mt-2 mb-4">
+            <div class="col">Daily open price:</div>
+            <div class="col"><input type="text" id="color-dailyOpenPrice"/></div>
+            <div class="col"></div>
+            <div class="col"></div>
           </div>
           <div class="row my-1">
             <div class="col">Body up:</div>

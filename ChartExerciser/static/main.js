@@ -391,6 +391,16 @@ const candleOptions = {
 const candleSeries1 = chart1.addCandlestickSeries(candleOptions);
 const candleSeries2 = chart2.addCandlestickSeries(candleOptions);
 
+function getMinMax(arr) {
+    let min = arr[0];
+    let max = arr[0];
+    let i = arr.length;
+    while (i--) {
+        min = arr[i] < min ? arr[i] : min;
+        max = arr[i] > max ? arr[i] : max;
+    }
+    return { min, max };
+}
 
 function resampleToHourlyBars(data) {
     let result = [];
@@ -402,8 +412,8 @@ function resampleToHourlyBars(data) {
             bar.time = hour * 3600;
             bar.open = filteredData[0].open;
             bar.close = filteredData[filteredData.length - 1].close;
-            bar.high = d3.max(filteredData, e => e.high);
-            bar.low = d3.min(filteredData, e => e.low);
+            bar.high = getMinMax(filteredData.map(e => e.high)).max;
+            bar.low = getMinMax(filteredData.map(e => e.low)).min;
             result.push(bar);
         }
     });
@@ -447,8 +457,8 @@ function updateSeriesPriceScales(series1, series2, dominantSeries) {
         e => barsInfo.from <= e.time && e.time <= barsInfo.to + oneBarTimeMarginInSeconds * 1000
     );
 
-    const minPrice = d3.min(filteredData, e => e.low);
-    const maxPrice = d3.max(filteredData, e => e.high);
+    const minPrice = getMinMax(filteredData.map(e => e.low)).min;
+    const maxPrice = getMinMax(filteredData.map(e => e.high)).max;
     const options = {
         autoscaleInfoProvider: () => ({
             priceRange: {

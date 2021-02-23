@@ -1372,9 +1372,9 @@ function initDatetimepicker() {
 
     const datetimepickerInput = document.getElementById('datetimepicker-input');
     datetimepickerInput.addEventListener('blur', (event) => {
-        const timestamp = moment.utc(event.target.value, DATETIME_FORMAT).unix() - getUTCOffsetSeconds();
-        if (timestamp !== getCurrentChartTime()) {
-            sendGotoAction(timestamp);
+        const inputTimestamp = moment.utc(event.target.value, DATETIME_FORMAT).unix();
+        if (inputTimestamp !== getCurrentChartTime()) {
+            sendGotoAction(inputTimestamp - getUTCOffsetSeconds());
         }
     });
     datetimepickerInput.addEventListener('keydown', (event) => {

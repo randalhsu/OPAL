@@ -53,7 +53,7 @@ def get_all_tickers() -> list[str]:
     return list(PRICE_DATA.keys())
 
 
-def load_tickers_info():
+def load_tickers_info() -> dict:
     tickers_info = {}
     data = None
     with open('static/PriceData/tickers_info.json') as f:
@@ -102,8 +102,11 @@ class PriceConsumer(WebsocketConsumer):
 
     def set_chart_timestamp(self, timestamp: int) -> bool:
         if isinstance(timestamp, int) and timestamp > 0:
-            time = datetime.datetime.utcfromtimestamp(timestamp)
-            return self.set_chart_time(time)
+            try:
+                time = datetime.datetime.utcfromtimestamp(timestamp)
+                return self.set_chart_time(time)
+            except OSError:
+                pass
         return False
 
     def get_chart_time(self) -> datetime.datetime:

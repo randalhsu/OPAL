@@ -34,6 +34,7 @@ if os.getenv('ALLOWED_HOSTS'):
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -42,7 +43,6 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'ChartExerciser',
-    'channels',
 ]
 
 MIDDLEWARE = [
@@ -134,3 +134,10 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
+
+
+try:
+    import django_heroku
+    django_heroku.settings(locals())
+except ImportError:
+    pass

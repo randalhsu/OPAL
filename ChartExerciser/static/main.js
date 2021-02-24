@@ -1147,7 +1147,12 @@ function adjustBarsTimeByUTCOffset(bars) {
     bars.forEach(bar => adjustBarTimeByUTCOffset(bar));
 }
 
-const socket = new WebSocket(`ws://${window.location.host}/socket`);
+function makeWebSocketConnection() {
+    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    return new WebSocket(`${wsScheme}://${window.location.host}/socket`);
+}
+
+const socket = makeWebSocketConnection();
 
 socket.onopen = function (e) {
     initDatetimepicker();

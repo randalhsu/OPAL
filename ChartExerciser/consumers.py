@@ -21,6 +21,14 @@ def resample(df: pd.DataFrame, resampled_timeframe_in_minutes: int) -> pd.DataFr
     return df.resample(f'{resampled_timeframe_in_minutes}T').agg(RESAMPLE_MAP).dropna()
 
 
+def convert_timestamp_to_datetime(timestamp: int) -> datetime.datetime:
+    return datetime.datetime.utcfromtimestamp(timestamp)
+
+
+def convert_datetime_to_timestamp(time: datetime.datetime) -> int:
+    return (time - EPOCH).total_seconds()
+
+
 def get_time_range_of_dataframe(df: pd.DataFrame) -> tuple[datetime.datetime, datetime.datetime]:
     start_time = df.iloc[[0]].index.to_pydatetime()[0]
     end_time = df.iloc[[-1]].index.to_pydatetime()[0]
@@ -78,6 +86,7 @@ TICKERS_INFO = load_tickers_info()
 
 class PriceConsumer(WebsocketConsumer):
     COMPRESSION_THRESHOLD_SIZE = 512
+    PREFETCH_BARS = 24  # Prefetch two hours' 5-min bars
 
     def __init__(self, *args, **kwargs) -> None:
         self.ticker = ''
@@ -93,24 +102,20 @@ class PriceConsumer(WebsocketConsumer):
         # print('bye')
         pass
 
-    def set_chart_time(self, time: datetime.datetime) -> bool:
-        start_time, end_time = get_time_range_of_dataframe(self.df)
-        if start_time <= time <= end_time:
-            self.now = time
-            return True
-        return False
-
-    def set_chart_timestamp(self, timestamp: int) -> bool:
+    def is_valid_timestamp(self, timestamp: int) -> bool:
         if isinstance(timestamp, int) and timestamp > 0:
             try:
-                time = datetime.datetime.utcfromtimestamp(timestamp)
-                return self.set_chart_time(time)
-            except OSError:
-                pass
+                time = convert_timestamp_to_datetime(timestamp)
+            except (OverflowError, OSError):
+                return False
+            start_time, end_time = get_time_range_of_dataframe(self.df)
+            return start_time <= time <= end_time
         return False
 
-    def get_chart_time(self) -> datetime.datetime:
-        return self.now
+    def align_time(self, time: datetime.datetime) -> datetime.datetime:
+        # Returns a valid time that has data
+        time_index = self.df.index.get_loc(time, method='backfill')
+        return self.df.iloc[[time_index]].index.to_pydatetime()[0]
 
     def set_ticker(self, ticker: str) -> bool:
         if ticker in PRICE_DATA:
@@ -119,47 +124,46 @@ class PriceConsumer(WebsocketConsumer):
             return True
         return False
 
-    def step_chart_time(self) -> datetime.datetime:
-        pos = self.df.index.get_loc(self.get_chart_time(), method='backfill')
-        if pos + 1 >= len(self.df.index):
-            # already last frame
-            return self.get_chart_time()
+    def get_random_time(self) -> datetime.datetime:
+        start_time, end_time = get_time_range_of_dataframe(self.df)
 
-        row = self.df.iloc[[pos + 1]]
-        time = row.index.to_pydatetime()[0]
-        self.set_chart_time(time)
-        return time
-
-    def get_random_time(self, start_time: datetime.datetime, end_time: datetime.datetime) -> datetime.datetime:
-        FIVE_MINUTES_IN_SECONDS = 60 * 5
         MARGIN = datetime.timedelta(days=1)
         if end_time - start_time < 2 * MARGIN:
             MARGIN = datetime.timedelta(days=0)
 
+        FIVE_MINUTES_IN_SECONDS = 60 * 5
         start_timestamp = (start_time + MARGIN - EPOCH).total_seconds()
         end_timestamp = (end_time - MARGIN - EPOCH).total_seconds()
         timestamp = random.randrange(
             start_timestamp, end_timestamp, FIVE_MINUTES_IN_SECONDS)
-        return datetime.datetime.utcfromtimestamp(timestamp)
+        return convert_timestamp_to_datetime(timestamp)
 
-    def jump_to_random_time(self) -> None:
-        start_time, end_time = get_time_range_of_dataframe(self.df)
-        random_time = self.get_random_time(start_time, end_time)
-        self.set_chart_time(random_time)
+    def get_sliced_price_data_after(self, start_time: datetime.datetime, n_bars: int) -> list[dict]:
+        try:
+            start_index = self.df.index.get_loc(start_time, method='pad') + 1
+        except KeyError:
+            return []
+        end_index = min(start_index + n_bars, len(self.df.index))
 
-    def get_sliced_price_data(self, end_time: datetime.datetime = None, n_bars: int = None) -> pd.DataFrame:
-        if end_time is None:
-            end_time = self.get_chart_time()
+        return self.get_sliced_price_data_by_indices(start_index, end_index)
 
-        if n_bars is None:
-            # Default return two days' 5-min bars
-            n_bars = int(2 * 23 * 60 / 5)
+    def get_sliced_price_data_until(self, end_time: datetime.datetime, prefetch: bool = False) -> list[dict]:
+        # Default return two days' 5-min bars
+        N_BARS = int(2 * 23 * 60 / 5)
 
         try:
             end_index = self.df.index.get_loc(end_time, method='backfill') + 1
         except KeyError:
             return []
-        start_index = max(0, end_index - n_bars)
+        start_index = max(0, end_index - N_BARS)
+
+        if prefetch:
+            LAST_INDEX = len(self.df.index)
+            end_index = min(end_index + type(self).PREFETCH_BARS, LAST_INDEX)
+
+        return self.get_sliced_price_data_by_indices(start_index, end_index)
+
+    def get_sliced_price_data_by_indices(self, start_index: int, end_index: int) -> list[dict]:
         df = self.df[start_index:end_index]
 
         result = []
@@ -193,60 +197,51 @@ class PriceConsumer(WebsocketConsumer):
             })
             return response
 
-        elif action == 'step':
-            self.step_chart_time()
-            response.update({
-                'data': self.get_sliced_price_data(n_bars=1),
-            })
-            return response
-
-        elif action == 'stepback':
-            timestamp = message.get('timestamp')
-            if self.set_chart_timestamp(timestamp):
-                return response
-
-            response.update({
-                'error': 'invalid timestamp',
-            })
-            return response
-
         elif action == 'switch':
             ticker = message.get('ticker')
-            if self.set_ticker(ticker):
-                # check if current time fits into new ticker's range
-                start_time, end_time = get_time_range_of_dataframe(self.df)
-                if not (start_time <= self.get_chart_time() <= end_time):
-                    self.jump_to_random_time()
-
-                response.update({
-                    'ticker': self.ticker,
-                    'data': self.get_sliced_price_data(),
-                })
+            if not self.set_ticker(ticker):
+                response.update({'error': 'unknown ticker'})
                 return response
 
+            timestamp = message.get('timestamp')
+            # check if current timestamp fits into new ticker's time range
+            if self.is_valid_timestamp(timestamp):
+                time = convert_timestamp_to_datetime(timestamp)
+            else:
+                time = self.get_random_time()
+
+            time = self.align_time(time)
+
             response.update({
-                'error': 'unknown ticker',
+                'ticker': self.ticker,
+                'timestamp': convert_datetime_to_timestamp(time),
+                'data': self.get_sliced_price_data_until(time, prefetch=True),
             })
             return response
 
-        elif action == 'goto':
+        elif action in ('goto', 'prefetch'):
             timestamp = message.get('timestamp')
-            if self.set_chart_timestamp(timestamp):
-                response.update({
-                    'ticker': self.ticker,
-                    'data': self.get_sliced_price_data(),
-                })
+            if not self.is_valid_timestamp(timestamp):
+                response.update({'error': 'invalid timestamp'})
                 return response
 
-            response.update({
-                'error': 'invalid timestamp',
-            })
+            response.update({'ticker': self.ticker})
+            time = convert_timestamp_to_datetime(timestamp)
+
+            if action == 'goto':
+                time = self.align_time(time)
+                response.update({
+                    'timestamp': convert_datetime_to_timestamp(time),
+                    'data': self.get_sliced_price_data_until(time, prefetch=True),
+                })
+            elif action == 'prefetch':
+                response.update({
+                    'data': self.get_sliced_price_data_after(time, n_bars=type(self).PREFETCH_BARS),
+                })
             return response
 
         # Should not fall to here
-        response.update({
-            'error': 'unknown action',
-        })
+        response.update({'error': 'unknown action'})
         return response
 
     def receive(self, text_data=None, bytes_data=None) -> None:

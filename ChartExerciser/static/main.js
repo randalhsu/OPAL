@@ -6,7 +6,7 @@ const DATA_UTC_OFFSET_HOUR = -5;  // EST
 const DATA_DAILY_OPEN_HOUR = 18;
 
 const DEFAULT_CONFIGS = {
-    UTCOffsetHour: '8',  // if changed, should clear all fetchedBars
+    UTCOffsetHour: '8',
     ticker: 'MES',
     bgColor: '000000',
     axesTextColor: 'FFFFFF',
@@ -174,6 +174,7 @@ function getUTCOffsetSeconds() {
 
 let tickersInfo = {};
 let fetchedBars = [];
+let displayBars = [];
 
 
 const chartWidth = Math.floor(document.body.clientWidth * 0.95 / 2);
@@ -421,21 +422,25 @@ function resampleToHourlyBars(data) {
 }
 
 function getCurrentChartTime() {
-    if (fetchedBars.length > 0) {
-        return fetchedBars[fetchedBars.length - 1].time;
+    if (displayBars.length > 0) {
+        return displayBars[displayBars.length - 1].time;
     }
     return null;
 }
 
 function getLastPrice() {
-    if (fetchedBars.length > 0) {
-        return fetchedBars[fetchedBars.length - 1].close;
+    if (displayBars.length > 0) {
+        return displayBars[displayBars.length - 1].close;
     }
     return NaN;
 }
 
+function getCurrentTicker() {
+    return document.getElementById('current-ticker').innerText;
+}
+
 function getTickerInfo(ticker) {
-    const currentTicker = ticker || document.getElementById('current-ticker').innerText;
+    const currentTicker = ticker || getCurrentTicker();
     return tickersInfo[currentTicker];
 }
 
@@ -453,7 +458,7 @@ function updateSeriesPriceScales(series1, series2, dominantSeries) {
     const oneBarTimeMarginInSeconds = (series === series1 ? 3600 : 300);
 
     const barsInfo = series.barsInLogicalRange(chart.timeScale().getVisibleLogicalRange());
-    const filteredData = fetchedBars.filter(
+    const filteredData = displayBars.filter(
         e => barsInfo.from <= e.time && e.time <= barsInfo.to + oneBarTimeMarginInSeconds * 1000
     );
 
@@ -518,12 +523,12 @@ function registerFitButtonsHandler() {
 
 function drawDailyOpenPrice() {
     const localeHourDiff = new Date().getTimezoneOffset() / 60;
-    for (let i = fetchedBars.length - 1; i >= 0; --i) {
-        const date = new Date(fetchedBars[i].time * 1000);
+    for (let i = displayBars.length - 1; i >= 0; --i) {
+        const date = new Date(displayBars[i].time * 1000);
         //TODO: DST may change hour?
         const userDailyOpenHour = (DATA_DAILY_OPEN_HOUR + getUTCOffsetHours() + 24) % 24;
         if ((date.getHours() + localeHourDiff + 24) % 24 === userDailyOpenHour && date.getMinutes() === 0) {
-            const dailyOpenPrice = fetchedBars[i].open;
+            const dailyOpenPrice = displayBars[i].open;
             for (const series of [candleSeries1, candleSeries2]) {
                 attachDailyOpenPriceLineToSeries(series, dailyOpenPrice);
             }
@@ -700,9 +705,9 @@ function updateAlertPricesTable() {
 
 function checkIfAlertTriggered() {
     let hasTriggeredAlert = false;
-    if (fetchedBars.length >= 2) {
-        const lastBar = fetchedBars[fetchedBars.length - 1];
-        const secondLastBar = fetchedBars[fetchedBars.length - 2];
+    if (displayBars.length >= 2) {
+        const lastBar = displayBars[displayBars.length - 1];
+        const secondLastBar = displayBars[displayBars.length - 2];
         let high = lastBar.high;
         let low = lastBar.low;
         // handle gap
@@ -795,9 +800,9 @@ function removeAllOrders() {
 
 function checkIfOrderTriggered() {
     let hasTriggeredOrder = false;
-    if (fetchedBars.length >= 2) {
-        const lastBar = fetchedBars[fetchedBars.length - 1];
-        const secondLastBar = fetchedBars[fetchedBars.length - 2];
+    if (displayBars.length >= 2) {
+        const lastBar = displayBars[displayBars.length - 1];
+        const secondLastBar = displayBars[displayBars.length - 2];
         const isAscending = lastBar.open > secondLastBar.close;
 
         orders.sort((a, b) => (+a.priceString) - (+b.priceString));
@@ -1076,7 +1081,6 @@ function registerChangeTickerHandler() {
             const currentTickerNode = document.getElementById('current-ticker');
             const currentTicker = currentTickerNode.innerText;
             if (ticker !== currentTicker) {
-                fetchedBars = [];
                 currentTickerNode.innerText = ticker;
                 sendSwitchAction(ticker);
             }
@@ -1099,53 +1103,13 @@ function updateDatetimepickerRange(ticker) {
     $('#datetimepicker1').datetimepicker('minDate', veryMinDate);
     $('#datetimepicker1').datetimepicker('maxDate', veryMaxDate);
 
-    const minDate = moment.utc((tickersInfo[ticker].minDate + getUTCOffsetSeconds()) * 1000);
-    const maxDate = moment.utc((tickersInfo[ticker].maxDate + getUTCOffsetSeconds()) * 1000);
+    const dataOffsetSeconds = -DATA_UTC_OFFSET_HOUR * 3600;
+    const minDate = moment.utc((tickersInfo[ticker].minDate + dataOffsetSeconds) * 1000);
+    const maxDate = moment.utc((tickersInfo[ticker].maxDate + dataOffsetSeconds) * 1000);
     $('#datetimepicker1').datetimepicker('minDate', minDate);
     $('#datetimepicker1').datetimepicker('maxDate', maxDate);
 }
 
-
-const fastForwardStatus = {
-    isFastForwarding: false,
-    fastForwardedBars: 0,
-    LIMIT_N_BARS: 24,
-}
-
-function startFastForwarding() {
-    fastForwardStatus.isFastForwarding = true;
-    sendStepAction();
-}
-
-function resetFastForwardStatus() {
-    fastForwardStatus.isFastForwarding = false;
-    fastForwardStatus.fastForwardedBars = 0;
-}
-
-function checkIfContinueFastForwardJourney(hasTriggeredPriceLine) {
-    if (hasTriggeredPriceLine) {
-        resetFastForwardStatus();
-        return;
-    }
-    if (!fastForwardStatus.isFastForwarding) {
-        return;
-    }
-    fastForwardStatus.fastForwardedBars += 1;
-    if (fastForwardStatus.fastForwardedBars >= fastForwardStatus.LIMIT_N_BARS) {
-        resetFastForwardStatus();
-        return;
-    }
-    sendStepAction();
-}
-
-
-function adjustBarTimeByUTCOffset(bar) {
-    bar.time += getUTCOffsetSeconds();
-}
-
-function adjustBarsTimeByUTCOffset(bars) {
-    bars.forEach(bar => adjustBarTimeByUTCOffset(bar));
-}
 
 function makeWebSocketConnection() {
     const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -1186,13 +1150,14 @@ socket.onmessage = function (e) {
     }
 }
 
+let isPrefetching = false;
+
 function handleResponse(response) {
     //console.log(response);
     if (response.hasOwnProperty('error')) {
         showMessage('⚠ SERVER ERROR: ' + response.error);
         return;
     }
-    let hourlyBars;
 
     switch (response.action) {
         case 'init':
@@ -1201,56 +1166,26 @@ function handleResponse(response) {
             return;
             break;
 
-        case 'step':
-            const bar = response.data[0];
-            adjustBarTimeByUTCOffset(bar);
-
-            if (bar.time === getCurrentChartTime()) {
-                showMessage('⚠️ Already reached final bar!');
-                resetFastForwardStatus();
-                return;
-            }
-            fetchedBars.push(bar);
-            hourlyBars = resampleToHourlyBars(fetchedBars);
-            candleSeries1.setData(hourlyBars);
-            candleSeries2.update(bar);
-
-            const lastBarTriggeredAlert = checkIfAlertTriggered();
-            const lastBarTriggeredOrder = checkIfOrderTriggered();
-            const hasTriggeredPriceLine = lastBarTriggeredAlert || lastBarTriggeredOrder;
-            checkIfContinueFastForwardJourney(hasTriggeredPriceLine);
-
-            updateOrdersTable();
-            updatePositionsTable();
-            break;
-
-        case 'stepback':
-            updateOrdersTable();
-            updatePositionsTable();
-            break;
-
         case 'switch':
         case 'goto':
             removeAllAlerts();
             removeAllOrders();
             removeAllPositions();
-            resetFastForwardStatus();
 
-            const bars = response.data;
             const ticker = response.ticker;
-            adjustBarsTimeByUTCOffset(bars);
+            const timestamp = response.timestamp + getUTCOffsetSeconds();
+            fetchedBars = response.data;
+            fetchedBars.forEach(bar => bar.time += getUTCOffsetSeconds());
 
-            hourlyBars = resampleToHourlyBars(bars);
-            candleSeries1.setData(hourlyBars);
-            candleSeries2.setData(bars);
-            fetchedBars = bars;
+            const endIndex = fetchedBars.map(bar => bar.time).indexOf(timestamp) + 1;
+            displayBars = fetchedBars.slice(0, endIndex);
 
-            candleSeries1.applyOptions({
-                priceFormat: tickersInfo[ticker],
-            });
-            candleSeries2.applyOptions({
-                priceFormat: tickersInfo[ticker],
-            });
+            for (const series of [candleSeries1, candleSeries2]) {
+                series.applyOptions({
+                    priceFormat: tickersInfo[ticker],
+                });
+            }
+            commonUpdate();
 
             if (response.action === 'switch') {
                 document.getElementById('current-ticker').innerText = ticker;
@@ -1258,10 +1193,63 @@ function handleResponse(response) {
                 resetChart1TimeScale();
             }
             break;
+
+        case 'prefetch':
+            if (response.ticker === getCurrentTicker()) {
+                const prefetchedBars = response.data;
+                prefetchedBars.forEach(bar => bar.time += getUTCOffsetSeconds());
+                fetchedBars.push(...prefetchedBars);
+            }
+            isPrefetching = false;
+            return;
+            break;
     }
+}
+
+function commonUpdate() {
+    const hourlyBars = resampleToHourlyBars(displayBars);
+    candleSeries1.setData(hourlyBars);
+    candleSeries2.setData(displayBars);
+
     updateSeriesPriceScales(candleSeries1, candleSeries2);
     drawDailyOpenPrice();
     updateDatetimepickerCurrentDatetime(getCurrentChartTime());
+    updateOrdersTable();
+    updatePositionsTable();
+}
+
+function step() {
+    const currentTime = getCurrentChartTime();
+    if (currentTime === getTickerInfo().maxDate) {
+        showMessage('⚠️ Already reached the final bar!');
+        return;
+    }
+
+    const nextIndex = fetchedBars.map(bar => bar.time).indexOf(currentTime) + 1;
+    if (nextIndex < fetchedBars.length) {
+        const bar = fetchedBars[nextIndex];
+        displayBars.push(bar);
+    }
+
+    const PREFETCH_THRESHOLD = 24;
+    if (fetchedBars.length - nextIndex < PREFETCH_THRESHOLD) {
+        sendPrefetchAction();
+    }
+
+    const lastBarTriggeredAlert = checkIfAlertTriggered();
+    const lastBarTriggeredOrder = checkIfOrderTriggered();
+    const hasTriggeredPriceLine = lastBarTriggeredAlert || lastBarTriggeredOrder;
+    commonUpdate();
+    return hasTriggeredPriceLine;
+}
+
+function stepback() {
+    if (displayBars.length <= 1) {
+        showMessage('⚠️ Already reached the first bar!');
+        return;
+    }
+    displayBars.pop();
+    commonUpdate();
 }
 
 socket.onclose = function (e) {
@@ -1276,22 +1264,12 @@ function sendInitAction() {
     socket.send(JSON.stringify({ action: 'init' }));
 }
 
-function sendStepAction() {
-    socket.send(JSON.stringify({ action: 'step' }));
-}
-
-function sendStepbackAction(timestamp) {
-    socket.send(JSON.stringify({
-        action: 'stepback',
-        timestamp: timestamp,
-    }));
-}
-
 function sendSwitchAction(ticker) {
-    // Change ticker
+    const timestamp = displayBars.length > 0 ? getCurrentChartTime() - getUTCOffsetSeconds() : 0;
     socket.send(JSON.stringify({
         action: 'switch',
         ticker: ticker,
+        timestamp: timestamp,
     }));
 }
 
@@ -1303,15 +1281,44 @@ function sendGotoAction(timestamp) {
     }));
 }
 
+function sendPrefetchAction() {
+    if (isPrefetching || fetchedBars.length === 0) {
+        return;
+    }
+
+    const timestamp = fetchedBars[fetchedBars.length - 1].time;
+    if (timestamp === getTickerInfo().maxDate) {
+        return;
+    }
+
+    isPrefetching = true;
+    socket.send(JSON.stringify({
+        action: 'prefetch',
+        timestamp: timestamp - getUTCOffsetSeconds(),
+    }));
+}
+
+async function startFastForward() {
+    // Fast forward until triggered any alert or order, or at most LIMIT_N_BARS,
+    // whichever happens first
+    const LIMIT_N_BARS = 24;
+    for (let i = 0; i < LIMIT_N_BARS; ++i) {
+        if (step()) {
+            break;
+        }
+        await sleep(20);
+    }
+}
+
 function registerForwardButtonsHandler() {
     document.getElementById('step-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
-        sendStepAction();
+        step();
     });
 
     document.getElementById('fast-forward-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
-        startFastForwarding();
+        startFastForward();
     });
 }
 
@@ -1321,34 +1328,20 @@ function registerKeyboardEventHandler() {
         switch (event.code) {
             case 'Space':
             case 'ArrowRight':
-                const maxDate = getTickerInfo().maxDate;
-                if (maxDate == getCurrentChartTime()) {
-                    showMessage('⚠️ Already reached final bar!');
-                    return;
-                }
-                sendStepAction();
-                // Prevent scrolling page with space key
-                if (event.code === 'Space' && event.target === document.body) {
+                step();
+
+                // Prevent scrolling page
+                if (event.target === document.body) {
                     event.preventDefault();
                 }
                 break;
 
             case 'KeyF':
-                // Fast forward until triggered any alert, or at most LIMIT_N_BARS,
-                // whichever happens first
-                startFastForwarding();
+                startFastForward();
                 break;
 
             case 'ArrowLeft':
-                if (fetchedBars.length <= 1) {
-                    showMessage('⚠️ Already reached the first bar!');
-                    return;
-                }
-                fetchedBars.pop();
-                const hourlyBars = resampleToHourlyBars(fetchedBars);
-                candleSeries1.setData(hourlyBars);
-                candleSeries2.setData(fetchedBars);
-                sendStepbackAction(getCurrentChartTime() - getUTCOffsetSeconds());
+                stepback();
                 break;
 
             case 'KeyA':
@@ -1372,7 +1365,7 @@ function initDatetimepicker() {
         dayViewHeaderFormat: 'YYYY-MM',
         stepping: 5,
         sideBySide: true,
-        useCurrent: false,
+        useCurrent: true,
     });
 
     const datetimepickerInput = document.getElementById('datetimepicker-input');

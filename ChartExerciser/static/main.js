@@ -1050,7 +1050,7 @@ function updatePositionsTable() {
 }
 
 
-const messageQueue = [];
+let messageQueue = [];
 let isShowingMessage = false;
 
 function showMessage(message, timeout = 2000) {
@@ -1058,18 +1058,41 @@ function showMessage(message, timeout = 2000) {
     consumeMessageQueue();
 }
 
+function dedupMessageQueue() {
+    const uniqueArray = [];
+    for (const [message, timeout] of messageQueue) {
+        let found = false;
+        if (message.includes('⚠')) {
+            for (const [m, t] of uniqueArray) {
+                if (message === m && timeout === t) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (!found) {
+            uniqueArray.push([message, timeout]);
+        }
+    }
+    messageQueue = uniqueArray;
+}
+
 function consumeMessageQueue() {
     if (isShowingMessage || messageQueue.length === 0) {
         return;
     }
+    dedupMessageQueue();
+
     const [message, timeout] = messageQueue.shift();
     const el = document.getElementById('message');
     el.innerHTML = message;
     isShowingMessage = true;
     setTimeout(() => {
         el.innerText = '';
-        isShowingMessage = false;
-        consumeMessageQueue();
+        setTimeout(() => {
+            isShowingMessage = false;
+            consumeMessageQueue();
+        }, 100);
     }, timeout);
 }
 

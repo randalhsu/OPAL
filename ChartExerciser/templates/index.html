@@ -16,7 +16,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/js/tempusdominus-bootstrap-4.min.js" integrity="sha512-k6/Bkb8Fxf/c1Tkyl39yJwcOZ1P4cRrJu77p83zJjN2Z55prbFHxPs9vN7q3l3+tSMGPDdoH51AEU8Vgo1cgAA==" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.8.1/spectrum.min.js" integrity="sha512-1aNp9qKP+hKU/VJwCtYqJP9tdZWbMDN5pEEXXoXT0pTAxZq1HHZhNBR/dtTNSrHO4U1FsFGGILbqG1O9nl8Mdg==" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.3/pako_inflate.min.js" integrity="sha512-PNGOE4EKAk0dmhDBFDVP2hDiZ3awyRMrvvQzpBgqVcB3KkFFHFjgWO3af8CVLIEy5dliIV3+/iXla4Lp0gZ/bw==" crossorigin="anonymous"></script>
-    <!--<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>-->
     <script src="{% static 'lightweight-charts.standalone.production.js' %}" defer></script>
     <script src="{% static 'main.js' %}" defer></script>
     <title>Chart Exerciser</title>
@@ -33,7 +32,7 @@
       {% endfor %}
     </div>
   </div>
-  <p class="mx-3 d-inline-flex font-weight-bold" id="current-ticker"></p>
+  <p class="mx-3 d-inline-flex text-monospace font-weight-bold" style="width: 3ch" id="current-ticker"></p>
   <div class="form-group d-inline-flex">
     <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
     <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker1" id="datetimepicker-input"/>

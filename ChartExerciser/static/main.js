@@ -1114,7 +1114,7 @@ function registerChangeTickerHandler() {
 function updateDatetimepickerCurrentDatetime(timestamp) {
     if (typeof timestamp === 'number') {
         const time = moment.utc(timestamp * 1000);
-        $('#datetimepicker1').datetimepicker('date', time);
+        $('#datetimepicker1').datetimepicker('date', time.format(DATETIME_FORMAT));
         document.getElementById('weekday').innerText = `${time.format('ddd')}`;
     }
 }
@@ -1126,11 +1126,10 @@ function updateDatetimepickerRange(ticker) {
     $('#datetimepicker1').datetimepicker('minDate', veryMinDate);
     $('#datetimepicker1').datetimepicker('maxDate', veryMaxDate);
 
-    const dataOffsetSeconds = -DATA_UTC_OFFSET_HOUR * 3600;
-    const minDate = moment.utc((tickersInfo[ticker].minDate + dataOffsetSeconds) * 1000);
-    const maxDate = moment.utc((tickersInfo[ticker].maxDate + dataOffsetSeconds) * 1000);
-    $('#datetimepicker1').datetimepicker('minDate', minDate);
-    $('#datetimepicker1').datetimepicker('maxDate', maxDate);
+    const minDate = moment.utc((tickersInfo[ticker].minDate + getUTCOffsetSeconds()) * 1000);
+    const maxDate = moment.utc((tickersInfo[ticker].maxDate + getUTCOffsetSeconds()) * 1000);
+    $('#datetimepicker1').datetimepicker('minDate', minDate.format(DATETIME_FORMAT));
+    $('#datetimepicker1').datetimepicker('maxDate', maxDate.format(DATETIME_FORMAT));
 }
 
 
@@ -1243,7 +1242,7 @@ function commonUpdate() {
 
 function step() {
     const currentTime = getCurrentChartTime();
-    if (currentTime === getTickerInfo().maxDate) {
+    if (currentTime === getTickerInfo().maxDate + getUTCOffsetSeconds()) {
         showMessage('⚠️ Already reached the final bar!');
         return;
     }

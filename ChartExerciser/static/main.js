@@ -901,11 +901,14 @@ class Position {
         }
         this.type = type;
         this.openedPrice = openedPrice;
+        this.openedTime = getCurrentChartTime();
         this.closedPrice = null;
+        this.closedTime = null;
         this.id = positionId++;
     }
     setClosedPrice(price) {
         this.closedPrice = price;
+        this.closedTime = getCurrentChartTime();
     }
     get status() {
         if (this.closedPrice === null) {
@@ -924,6 +927,50 @@ class Position {
             steps = -steps;
         }
         return steps * tickerInfo.tickValue;
+    }
+    toMarkers() {
+        const BUY_MARKER = {
+            position: 'belowBar',
+            shape: 'arrowUp',
+            size: 1.5,
+            color: PRICE_LINE_COLOR.buy,
+        };
+        const SELL_MARKER = {
+            position: 'aboveBar',
+            shape: 'arrowDown',
+            size: 1.5,
+            color: PRICE_LINE_COLOR.sell,
+        };
+
+        const markers = [];
+        if (this.type === 'buy') {
+            markers.push({
+                ...BUY_MARKER,
+                price: this.openedPrice,
+                time: this.openedTime,
+            });
+            if (this.closedPrice !== null) {
+                markers.push({
+                    ...SELL_MARKER,
+                    price: this.closedPrice,
+                    time: this.closedTime,
+                });
+            }
+        } else {
+            markers.push({
+                ...SELL_MARKER,
+                price: this.openedPrice,
+                time: this.openedTime,
+            });
+            if (this.closedPrice !== null) {
+                markers.push({
+                    ...BUY_MARKER,
+                    price: this.closedPrice,
+                    time: this.closedTime,
+                });
+            }
+        }
+        return markers;
     }
     toPLString() {
         return `$${convertDollarsToString(this.calculatePL())}`;
@@ -1030,8 +1077,19 @@ function updatePositionsTable() {
             ul.appendChild(li);
         }
     }
+
+    updatePositionsMarkers();
 }
 
+function updatePositionsMarkers() {
+    const markers = [];
+    positions.forEach((position) => markers.push(...position.toMarkers()));
+    markers.sort((a, b) => a.time - b.time);
+    candleSeries2.setMarkers(markers);
+
+    markers.forEach((marker) => marker.time -= marker.time % 3600);
+    candleSeries1.setMarkers(markers);
+}
 
 let messageQueue = [];
 let isShowingMessage = false;

@@ -934,6 +934,9 @@ class Position {
         }
         return 'closed';
     }
+    get direction() {
+        return this.type === 'buy' ? 'Long' : 'Short';
+    }
     calculatePL() {
         const tickerInfo = getTickerInfo();
         const endPrice = this.closedPrice || getLastPrice();
@@ -958,7 +961,7 @@ class Position {
             }
             closedPrice = ` ${arrow} ${convertPriceToString(this.closedPrice)}`;
         }
-        return `${this.type} @ ${openedPrice}${closedPrice}`;
+        return `${this.direction} @ ${openedPrice}${closedPrice}`;
     }
 }
 
@@ -967,14 +970,15 @@ function calculatePositionsTotalPL() {
 }
 
 function openPosition(type, openedPrice) {
-    positions.push(new Position(type, openedPrice));
-    showMessage(`Position opened @ ${openedPrice} !`);
+    const position = new Position(type, openedPrice);
+    positions.push(position);
+    showMessage(`${position.direction} position opened @ ${openedPrice}`);
 }
 
 function closePosition(position, closedPrice) {
     closedPrice = closedPrice || getLastPrice();
     position.setClosedPrice(closedPrice);
-    showMessage(`Position closed @ ${closedPrice} !`);
+    showMessage(`${position.direction} position closed @ ${closedPrice}`);
     updatePositionsTable();
 }
 

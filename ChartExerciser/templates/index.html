@@ -18,10 +18,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.3/pako_inflate.min.js" integrity="sha512-PNGOE4EKAk0dmhDBFDVP2hDiZ3awyRMrvvQzpBgqVcB3KkFFHFjgWO3af8CVLIEy5dliIV3+/iXla4Lp0gZ/bw==" crossorigin="anonymous"></script>
     <script src="{% static 'lightweight-charts.standalone.production.js' %}" defer></script>
     <script src="{% static 'main.js' %}" defer></script>
-    <title>Chart Exerciser</title>
+    <title>Practice Your Price Action Skill</title>
 </head>
 <body>
-<div class="container-fluid mt-3">
+<div class="container-fluid mt-3 clearfix">
   <div class="dropdown d-inline-flex">
     <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
       Ticker
@@ -32,7 +32,7 @@
       {% endfor %}
     </div>
   </div>
-  <p class="mx-3 d-inline-flex text-monospace font-weight-bold" style="width: 3ch" id="current-ticker"></p>
+  <label class="mx-3 text-monospace font-weight-bold h5" style="width: 3ch" id="current-ticker"></label>
   <div class="form-group d-inline-flex">
     <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
     <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker1" id="datetimepicker-input"/>
@@ -41,12 +41,17 @@
       </div>
     </div>
   </div>
-  <p class="text-monospace d-inline-flex mx-2" id="weekday"></p>
-  <button type="button" class="btn btn-primary d-inline-flex mx-1" id="step-button" title="Step 1 bar&#013;(Hotkey: Space)"><i class="fa fa-step-forward" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-primary d-inline-flex mr-2" id="fast-forward-button" title="Fast forward 24 bars&#013;(Hotkey: F)"><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
-  <p class="mx-1 d-inline-flex" id="message"></p>
-  <button type="button" class="btn btn-info float-right ml-2" id="help-button" title="Help"><i class="fa fa-question" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-secondary float-right mx-2" id="options-button" title="Options" data-toggle="modal" data-target="#optionsModal"><i class="fa fa-cog" aria-hidden="true"></i></button>
+  <label class="text-monospace ml-2 mr-3" id="day-of-week" title="Day of Week"></label>
+  <button type="button" class="btn btn-primary mr-1 py-1" id="step-button" title="Step 1 bar&#013;(Hotkey: Space)"><i class="fa fa-step-forward" aria-hidden="true"></i></button>
+  <button type="button" class="btn btn-primary mr-2 py-1" id="fast-forward-button" title="Fast forward 24 bars&#013;(Hotkey: F)"><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
+  <button type="button" class="btn btn-primary mr-1 px-2 py-1" id="create-alert-button" data-toggle="modal" data-target="#createAlertModal" title="Create alert"><i class="fa fa-bell" aria-hidden="true"></i></button>
+  <button type="button" class="btn btn-success text-monospace mr-1 py-1" id="buy-market-button" title="Buy market&#013;(Tip: To place a Buy order, hover over the charts and press hotkey &quot;B&quot;.)">B</button>
+  <button type="button" class="btn btn-danger text-monospace mr-1 py-1" id="sell-market-button" title="Sell market&#013;(Tip: To place a Sell order, hover over the charts and press hotkey &quot;S&quot;.)">S</button>
+  <label class="mx-1 d-inline-flex mr-auto" id="message"></label>
+  <div class="float-right">
+    <button type="button" class="btn btn-secondary" id="options-button" title="Options" data-toggle="modal" data-target="#optionsModal"><i class="fa fa-cog" aria-hidden="true"></i></button>
+    <button type="button" class="btn btn-info ml-2" id="help-button" title="Help"><i class="fa fa-question-circle-o" aria-hidden="true"></i></button>
+  </div>
 </div>
 <div class="container-fluid">
   <div class="row d-inline-flex flex-nowrap">
@@ -65,10 +70,10 @@
   </div>
   <div class="row my-3">
     <div class="col">
-      <ul class="col list-group" id="alert-prices-ul"></ul>
+      <ul class="col list-group" id="alerts-ul" title="Hover over the charts and press hotkey &quot;A&quot; to create an alert"></ul>
     </div>
     <div class="col">
-      <ul class="list-group" id="orders-ul"></ul>
+      <ul class="list-group" id="orders-ul" title="Hover over the charts and press hotkey &quot;B&quot; or &quot;S&quot; to place an order"></ul>
     </div>
     <div class="col">
       <ul class="list-group" id="positions-ul"></ul>
@@ -78,6 +83,27 @@
 
 <div id="chart1-resizer" class="position-absolute text-light user-select-none" style="z-index: 1030">⇲</div>
 <div id="chart2-resizer" class="position-absolute text-light user-select-none" style="z-index: 1030">⇲</div>
+
+<div class="modal fade" id="createAlertModal" aria-labelledby="createAlertModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createAlertModalLabel">Create Alert</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="container-fluid form-group">
+          <input type="number" class="form-control" id="alert-price" name="alert-price" value="0" min="0" step="1"/>
+          <small class="form-text text-muted">Tip: You can also hover over the charts and press hotkey <span class="font-weight-bold">A</span> to add an alert.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="create-alert-confirm-button">Create</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal fade" id="optionsModal" aria-labelledby="optionsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">

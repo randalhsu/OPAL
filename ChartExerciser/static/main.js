@@ -147,16 +147,6 @@ function getHexColor(s) {
     }
 
     updateNewURLDisplay();
-
-    // Prevent the trigger button keeps getting focus
-    $('#optionsModal').on('shown.bs.modal', function (e) {
-        $('#options-button').one('focus', function (e) {
-            $(this).blur();
-        });
-    });
-    document.getElementById('options-button').addEventListener('click', function (e) {
-        $(this).trigger('blur');
-    });
 })();
 
 
@@ -480,11 +470,6 @@ function updateSeriesPriceScales(series1, series2, dominantSeries) {
     series2.applyOptions(options);
 }
 
-function setPriceScalesAutoScale() {
-    chart1.priceScale('left').applyOptions({ autoScale: true });
-    chart2.priceScale('right').applyOptions({ autoScale: true });
-}
-
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -500,26 +485,9 @@ async function fullUpdateSeriesPriceScales(series1, series2, dominantSeries) {
 async function resetAllScales() {
     resetChart1TimeScale();
     chart2.timeScale().resetTimeScale();
-    setPriceScalesAutoScale();
     specifiedDominantSeries = undefined;
     fullUpdateSeriesPriceScales(candleSeries1, candleSeries2);
 }
-
-function registerFitButtonsHandler() {
-    document.getElementById('fit-chart1-button').onclick = (event) => {
-        fullUpdateSeriesPriceScales(candleSeries1, candleSeries2, candleSeries1);
-        event.target.blur();
-    }
-    document.getElementById('fit-chart2-button').onclick = (event) => {
-        fullUpdateSeriesPriceScales(candleSeries1, candleSeries2, candleSeries2);
-        event.target.blur();
-    }
-    document.getElementById('reset-scales-button').onclick = (event) => {
-        resetAllScales();
-        event.target.blur();
-    }
-}
-
 
 function drawDailyOpenPrice() {
     const localeHourDiff = new Date().getTimezoneOffset() / 60;
@@ -574,7 +542,7 @@ function customPriceLineDraggedHandler(params) {
 
     if (type === 'alert') {
         syncDraggablePriceLines(alerts, priceLine, params.fromPriceString);
-        updateAlertPricesTable();
+        updateAlertsTable();
     } else if (DIRECTION_TYPES.includes(type)) {
         syncDraggablePriceLines(orders, priceLine, params.fromPriceString);
         updateOrdersTable();
@@ -648,7 +616,7 @@ function addAlert(priceString) {
     alert.series2PriceLine = candleSeries2.createPriceLine(priceLineOptions);
     alerts.push(alert);
 
-    updateAlertPricesTable();
+    updateAlertsTable();
     showMessage(`🕭 @ ${priceString}`);
 }
 
@@ -656,7 +624,7 @@ function removeAlert(alert) {
     candleSeries1.removePriceLine(alert.series1PriceLine);
     candleSeries2.removePriceLine(alert.series2PriceLine);
     alerts = alerts.filter(a => a !== alert);
-    updateAlertPricesTable();
+    updateAlertsTable();
 }
 
 function removeAllAlerts() {
@@ -670,8 +638,8 @@ function createEmptyLi() {
     return li;
 }
 
-function updateAlertPricesTable() {
-    const ul = document.getElementById('alert-prices-ul');
+function updateAlertsTable() {
+    const ul = document.getElementById('alerts-ul');
     while (ul.firstChild) {
         ul.removeChild(ul.firstChild);
     }
@@ -680,7 +648,7 @@ function updateAlertPricesTable() {
     titleLi.setAttribute('class', 'list-group-item list-group-item-info d-flex');
     titleLi.innerHTML = `
         <span class="mr-3 align-middle"><i class="fa fa-bell" aria-hidden="true"></i></span>
-        <span class="mr-2 flex-grow-1 text-nowrap">Alert Prices</span>
+        <span class="mr-2 flex-grow-1 text-nowrap">Alerts</span>
         <button type="button" class="close" aria-label="Remove" title="Remove all alerts"><span aria-hidden="true">&times;</span></button>
     `;
     titleLi.getElementsByTagName('button')[0].onclick = () => removeAllAlerts();
@@ -787,9 +755,20 @@ function addOrder(type, priceString) {
     updateOrdersTable();
 }
 
+function addMarketOrder(type) {
+    const price = getLastPrice();
+    const order = new Order(type, price.toString());
+    activateOrder(order, price);
+    updatePositionsTable();
+}
+
 function removeOrder(order) {
-    candleSeries1.removePriceLine(order.series1PriceLine);
-    candleSeries2.removePriceLine(order.series2PriceLine);
+    if (order.series1PriceLine !== null) {
+        candleSeries1.removePriceLine(order.series1PriceLine);
+    }
+    if (order.series2PriceLine !== null) {
+        candleSeries2.removePriceLine(order.series2PriceLine);
+    }
     orders = orders.filter(o => o !== order);
     updateOrdersTable();
 }
@@ -1119,7 +1098,7 @@ function updateDatetimepickerCurrentDatetime(timestamp) {
     if (typeof timestamp === 'number') {
         const time = moment.utc(timestamp * 1000);
         $('#datetimepicker1').datetimepicker('date', time.format(DATETIME_FORMAT));
-        document.getElementById('weekday').innerText = `${time.format('ddd')}`;
+        document.getElementById('day-of-week').innerText = `${time.format('ddd')}`;
     }
 }
 
@@ -1147,10 +1126,9 @@ const socket = makeWebSocketConnection();
 socket.onopen = function (e) {
     initDatetimepicker();
     registerChangeTickerHandler();
-    registerForwardButtonsHandler();
+    registerButtonsHandler();
     registerKeyboardEventHandler();
-    registerFitButtonsHandler();
-    updateAlertPricesTable();
+    updateAlertsTable();
     updateOrdersTable();
     updatePositionsTable();
     registerChartResizersHandler();
@@ -1217,7 +1195,11 @@ function handleResponse(response) {
                 document.getElementById('current-ticker').innerText = ticker;
                 updateDatetimepickerRange(ticker);
                 resetChart1TimeScale();
+                messageQueue = [];
             }
+
+            const nowString = moment.utc(getCurrentChartTime() * 1000).format(DATETIME_FORMAT);
+            showMessage(`Jumped to ${nowString}`);
             break;
 
         case 'prefetch':
@@ -1336,15 +1318,81 @@ async function startFastForward() {
     }
 }
 
-function registerForwardButtonsHandler() {
+function registerButtonsHandler() {
+    // Since "Space" is an important hotkey, always blur in order to prevent Space triggering buttons
+
     document.getElementById('step-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
         step();
     });
-
     document.getElementById('fast-forward-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
         startFastForward();
+    });
+
+    $('#createAlertModal').on('shown.bs.modal', function (e) {
+        $('#create-alert-button').one('focus', function (e) {
+            $(this).blur();
+        });
+    });
+    const alertPriceInput = $('#alert-price');
+    const createAlertConfirmButton = document.getElementById('create-alert-confirm-button');
+    alertPriceInput[0].addEventListener('keyup', function (e) {
+        createAlertConfirmButton.disabled = !alertPriceInput[0].checkValidity();
+    });
+    alertPriceInput[0].addEventListener('keydown', function (event) {
+        if (event.code === 'Enter' || event.code === 'NumpadEnter') {
+            createAlertConfirmButton.click();
+        }
+    });
+    document.getElementById('create-alert-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+        const tickerInfo = getTickerInfo();
+        alertPriceInput.attr('step', tickerInfo.minMove);
+        alertPriceInput.change(function () {
+            $(this).val(parseFloat($(this).val()).toFixed(tickerInfo.precision));
+            createAlertConfirmButton.disabled = !alertPriceInput[0].checkValidity();
+        });
+        alertPriceInput.val(getLastPrice());
+    });
+    createAlertConfirmButton.addEventListener('click', function (e) {
+        $('#createAlertModal').modal('hide');
+        addAlert(alertPriceInput.val().toString());
+    });
+
+    document.getElementById('buy-market-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+        addMarketOrder('buy');
+    });
+    document.getElementById('sell-market-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+        addMarketOrder('sell');
+    });
+
+    document.getElementById('fit-chart1-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+        chart1.priceScale('left').applyOptions({ autoScale: true });
+        fullUpdateSeriesPriceScales(candleSeries1, candleSeries2, candleSeries1);
+    });
+    document.getElementById('fit-chart2-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+        chart2.priceScale('right').applyOptions({ autoScale: true });
+        fullUpdateSeriesPriceScales(candleSeries1, candleSeries2, candleSeries2);
+    });
+    document.getElementById('reset-scales-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+        chart1.priceScale('left').applyOptions({ autoScale: true });
+        chart2.priceScale('right').applyOptions({ autoScale: true });
+        resetAllScales();
+    });
+
+    $('#optionsModal').on('shown.bs.modal', function (e) {
+        $('#options-button').one('focus', function (e) {
+            $(this).blur();
+        });
+    });
+    document.getElementById('options-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
     });
 }
 
@@ -1367,6 +1415,7 @@ function registerKeyboardEventHandler() {
                 break;
 
             case 'ArrowLeft':
+            case 'KeyZ':
                 stepback();
                 break;
 

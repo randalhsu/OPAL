@@ -41,12 +41,12 @@
       </div>
     </div>
   </div>
-  <label class="text-monospace ml-2 mr-3" id="day-of-week" title="Day of Week"></label>
-  <button type="button" class="btn btn-primary mr-1 py-1" id="step-button" title="Step 1 bar&#013;(Hotkey: Space)"><i class="fa fa-step-forward" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-primary mr-2 py-1" id="fast-forward-button" title="Fast forward 24 bars&#013;(Hotkey: F)"><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-primary mr-1 px-2 py-1" id="create-alert-button" data-toggle="modal" data-target="#createAlertModal" title="Create alert"><i class="fa fa-bell" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-success text-monospace mr-1 py-1" id="buy-market-button" title="Buy market&#013;(Tip: To place a Buy order, hover over the charts and press hotkey &quot;B&quot;.)">B</button>
-  <button type="button" class="btn btn-danger text-monospace mr-1 py-1" id="sell-market-button" title="Sell market&#013;(Tip: To place a Sell order, hover over the charts and press hotkey &quot;S&quot;.)">S</button>
+  <label class="text-monospace ml-2 mr-2" id="day-of-week" title="Day of Week"></label>
+  <button type="button" class="btn btn-primary mr-0 py-1" id="step-button" title="Step 1 bar&#013;(Hotkey: Space)"><i class="fa fa-step-forward" aria-hidden="true"></i></button>
+  <button type="button" class="btn btn-primary mr-1 py-1" id="fast-forward-button" title="Fast forward 24 bars&#013;(Hotkey: F)"><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
+  <button type="button" class="btn btn-primary mr-1 py-1" id="create-alert-button" data-toggle="modal" data-target="#createAlertModal" title="Create alert"><i class="fa fa-bell" aria-hidden="true"></i></button>
+  <button type="button" class="btn btn-success text-monospace mr-0 px-3 py-1" id="buy-market-button" title="Buy market&#013;(💡 Tip: To place a Buy order, hover over the charts and press hotkey &quot;B&quot;.)">B</button>
+  <button type="button" class="btn btn-danger text-monospace mr-1 px-3 py-1" id="sell-market-button" title="Sell market&#013;(💡 Tip: To place a Sell order, hover over the charts and press hotkey &quot;S&quot;.)">S</button>
   <label class="mx-1 d-inline-flex mr-auto" id="message"></label>
   <div class="float-right">
     <button type="button" class="btn btn-secondary" id="options-button" title="Options" data-toggle="modal" data-target="#optionsModal"><i class="fa fa-cog" aria-hidden="true"></i></button>
@@ -60,11 +60,11 @@
   </div>
   <div class="row mt-2">
     <div class="col d-flex justify-content-center">
-      <button type="button" class="btn btn-dark btn-lg" id="fit-chart1-button" title="Fit price scale to 60K chart">Fit to 60K</button>
+      <button type="button" class="btn btn-dark btn-lg" id="fit-chart1-button" title="Fit price scales to H1 chart">Fit to H1</button>
     </div>
     <div class="col d-flex justify-content-between">
       <button type="button" class="btn btn-lg invisible">invisible</button>
-      <button type="button" class="btn btn-dark btn-lg" id="fit-chart2-button" title="Fit price scale to 5K chart">Fit to 5K</button>
+      <button type="button" class="btn btn-dark btn-lg" id="fit-chart2-button" title="Fit price scales to M5 chart">Fit to M5</button>
       <button type="button" class="btn btn-dark btn-lg" id="reset-scales-button" title="Reset time and price scales">Reset Scales</button>
     </div>
   </div>
@@ -94,7 +94,7 @@
       <div class="modal-body">
         <div class="container-fluid form-group">
           <input type="number" class="form-control" id="alert-price" name="alert-price" value="0" min="0" step="1"/>
-          <small class="form-text text-muted">Tip: You can also hover over the charts and press hotkey <span class="font-weight-bold">A</span> to add an alert.</small>
+          <small class="form-text text-muted">💡 Tip: You can also hover over the charts and press hotkey <span class="font-weight-bold">A</span> to add an alert.</small>
         </div>
       </div>
       <div class="modal-footer">
@@ -133,7 +133,7 @@
             <div class="col"><input type="text" id="color-axes-text"/></div>
           </div>
           <div class="row mt-2 mb-4">
-            <div class="col">Daily open price:</div>
+            <div class="col">Daily open price <abbr title="To hide this line, set it as the same color as Background's.">🛈</abbr>:</div>
             <div class="col"><input type="text" id="color-dailyOpenPrice"/></div>
             <div class="col"></div>
             <div class="col"></div>

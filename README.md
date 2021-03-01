@@ -1,14 +1,15 @@
-# OPAL: Price Action Learing aids
+# OPAL: Price Action Learning aids
 [Demo site](https://practicepriceaction.herokuapp.com?help=1)
 
 A web app which helps traders refining their skills.
 
 ## Features
-* Multiple time frame analysis (H1 and M5)
+* Multiple time frame charts (H1 and M5)
 * Draws Daily open price
 * Historical data bar-by-bar replaying and fast forwarding
     * Auto prefetch for smoother experience
     * Websocket compression for lower bandwidth usage
+* Switch between multiple tickers
 * Jumps to a specified time
 * Alerts
 * Buy/Sell orders
@@ -19,10 +20,9 @@ A web app which helps traders refining their skills.
 
 1. Build [lightweight-charts](https://github.com/tradingview/lightweight-charts) with the instructions in [lightweight-charts-patch](https://github.com/randalhsu/OPAL/tree/main/lightweight-charts-patch)
 2. Put your historical data into ``static/PriceData`` folder
-3. Install Python (tested with v3.9.2)
-4. Install dependencies: ``pip install -r requirements.txt``
-5. Run Django server: ``python manage.py runserver``
-6. Browse ``http://127.0.0.1:8000/``
+3. Install Python (tested with v3.9.2) and dependencies: ``pip install -r requirements.txt``
+4. Run Django server: ``python manage.py runserver``
+5. Browse ``http://127.0.0.1:8000/``
 
 ## How to deploy to Heroku
 

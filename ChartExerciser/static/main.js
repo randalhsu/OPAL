@@ -1287,7 +1287,7 @@ function commonUpdate() {
 function step() {
     const currentTime = getCurrentChartTime();
     if (currentTime === getTickerInfo().maxDate + getUTCOffsetSeconds()) {
-        showMessage('⚠️ Already reached the final bar!');
+        showMessage('⚠️ Already reached the end of historial data!');
         return;
     }
 

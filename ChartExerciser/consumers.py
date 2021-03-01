@@ -1,3 +1,4 @@
+from __future__ import annotations
 import datetime
 import json
 from pathlib import Path
@@ -8,7 +9,7 @@ from channels.generic.websocket import WebsocketConsumer
 import pandas as pd
 
 
-EPOCH = datetime.datetime.utcfromtimestamp(0)
+EPOCH: datetime.datetime = datetime.datetime.utcfromtimestamp(0)
 
 
 def resample(df: pd.DataFrame, resampled_timeframe_in_minutes: int) -> pd.DataFrame:
@@ -61,7 +62,7 @@ def get_all_tickers() -> list[str]:
     return list(PRICE_DATA.keys())
 
 
-def load_tickers_info() -> dict:
+def load_tickers_info() -> dict[str, dict]:
     tickers_info = {}
     data = None
     with open('static/PriceData/tickers_info.json') as f:
@@ -257,5 +258,5 @@ class PriceConsumer(WebsocketConsumer):
             else:
                 self.send(text_data=json_string)
         except:
-            # print('Unexpected error:', sys.exc_info()[0])
-            raise
+            print('Unexpected error:', sys.exc_info()[0])
+            # raise

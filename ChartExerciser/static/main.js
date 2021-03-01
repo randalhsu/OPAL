@@ -1192,6 +1192,15 @@ socket.onopen = function (e) {
     registerChartResizersHandler();
 
     sendInitAction();
+
+    // Show Help dialog if explicitly instructed in URL params
+    if ((new URL(window.location.href)).searchParams.has('help')) {
+        // Auto redirect to trim the param when closing the dialog
+        $('#helpModal').on('hidden.bs.modal', function (e) {
+            window.location.replace(window.location.origin + window.location.pathname);
+        })
+        $('#helpModal').modal('show');
+    }
 }
 
 socket.onmessage = function (e) {
@@ -1452,11 +1461,20 @@ function registerButtonsHandler() {
     document.getElementById('options-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
     });
+
+    $('#helpModal').on('shown.bs.modal', function (e) {
+        $('#help-button').one('focus', function (e) {
+            $(this).blur();
+        });
+    });
+    document.getElementById('help-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+    });
 }
 
 function registerKeyboardEventHandler() {
     window.addEventListener('keydown', function (event) {
-        console.log(`KeyboardEvent: code='${event.code}'`);
+        //console.log(`KeyboardEvent: code='${event.code}'`);
         switch (event.code) {
             case 'Space':
             case 'ArrowRight':

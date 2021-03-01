@@ -21,8 +21,10 @@ A web app which helps traders refining their skills.
 1. Build [lightweight-charts](https://github.com/tradingview/lightweight-charts) with the instructions in [lightweight-charts-patch](https://github.com/randalhsu/OPAL/tree/main/lightweight-charts-patch)
 2. Put your historical data into ``static/PriceData`` folder
 3. Install Python (tested with v3.9.2) and dependencies: ``pip install -r requirements.txt``
-4. Run Django server: ``python manage.py runserver``
-5. Browse ``http://127.0.0.1:8000/``
+4. ``python manage.py collectstatic``
+5. ``python manage.py migrate``
+6. ``python manage.py runserver``
+7. Browse ``http://127.0.0.1:8000/``
 
 ## How to deploy to Heroku
 

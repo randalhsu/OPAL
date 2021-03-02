@@ -9,6 +9,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/css/tempusdominus-bootstrap-4.min.css" integrity="sha512-3JRrEUwaCkFUBLK1N8HehwQgu8e23jTH4np5NHOmQOobuC4ROQxFwFgBLTnhcnQRMs84muMh0PnnwXlPq5MGjg==" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.8.1/spectrum.min.css" integrity="sha512-KuSX+43gVS5MEIJD2ewtrFPOHqC1PJnL8o2f5ciggPC0JUZ8XV0QXlfArO1mSzKkVFdRjsBDfrTU96C5SuRfqQ==" crossorigin="anonymous" />
+    <style>
+      .btn-shift {
+        margin-top: -6px;
+      }
+    </style>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
@@ -42,11 +47,11 @@
     </div>
   </div>
   <label class="text-monospace ml-2 mr-2" id="day-of-week" title="Day of Week"></label>
-  <button type="button" class="btn btn-primary mr-0 py-1" id="step-button" title="Step 1 bar&#013;(Hotkey: Space)"><i class="fa fa-step-forward" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-primary mr-1 py-1" id="fast-forward-button" title="Fast forward 24 bars&#013;(Hotkey: F)"><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-primary mr-1 py-1" id="create-alert-button" data-toggle="modal" data-target="#createAlertModal" title="Create alert"><i class="fa fa-bell" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-success text-monospace mr-0 px-3 py-1" id="buy-market-button" title="Buy market&#013;(💡 Tip: To place a Buy order, hover over the charts and press hotkey &quot;B&quot;.)">B</button>
-  <button type="button" class="btn btn-danger text-monospace mr-1 px-3 py-1" id="sell-market-button" title="Sell market&#013;(💡 Tip: To place a Sell order, hover over the charts and press hotkey &quot;S&quot;.)">S</button>
+  <button type="button" class="btn btn-primary btn-shift mr-0 px-3 py-1.5" id="step-button" title="Step 1 bar&#013;(Hotkey: Space)"><i class="fa fa-step-forward" aria-hidden="true"></i></button>
+  <button type="button" class="btn btn-primary btn-shift mr-1 py-1.5" id="fast-forward-button" title="Fast forward 24 bars&#013;(Hotkey: F)"><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
+  <button type="button" class="btn btn-primary btn-shift mr-1 py-1.5" id="create-alert-button" data-toggle="modal" data-target="#createAlertModal" title="Create alert"><i class="fa fa-bell" aria-hidden="true"></i></button>
+  <button type="button" class="btn btn-success btn-shift text-monospace mr-0 px-3 py-1.5" id="buy-market-button" title="Buy market&#013;(💡 Tip: To place a Buy order, hover over the charts and press hotkey &quot;B&quot;.)">B</button>
+  <button type="button" class="btn btn-danger btn-shift text-monospace mr-1 px-3 py-1.5" id="sell-market-button" title="Sell market&#013;(💡 Tip: To place a Sell order, hover over the charts and press hotkey &quot;S&quot;.)">S</button>
   <label class="mx-1 d-inline-flex mr-auto" id="message"></label>
   <div class="float-right">
     <button type="button" class="btn btn-secondary" id="options-button" title="Options" data-toggle="modal" data-target="#optionsModal"><i class="fa fa-cog" aria-hidden="true"></i></button>
@@ -166,7 +171,7 @@
 </div>
 
 <div class="modal fade" id="helpModal" aria-labelledby="helpModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-scrollable">
+  <div class="modal-dialog modal-dialog-scrollable" style="min-width: 520px">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="helpModalLabel">Help</h5>

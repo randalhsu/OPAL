@@ -48,7 +48,7 @@ def load_csv_file_into_dataframe(filepath: Path) -> pd.DataFrame:
 def load_all_price_data() -> dict[str, pd.DataFrame]:
     path = Path('static/PriceData')
     price_data = {}
-    for file in sorted(path.glob('*.txt')):
+    for file in sorted(path.glob('*.zip')):
         try:
             price_data[file.stem] = load_csv_file_into_dataframe(file)
         except:

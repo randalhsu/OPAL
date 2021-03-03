@@ -1,6 +1,6 @@
-From 6618f3fc81f1d72064a8a7bfbdefafa4ea516051 Mon Sep 17 00:00:00 2001
-From: Randal <xxx@gmail.com>
-Date: Tue, 16 Feb 2021 11:43:27 +0800
+From d4b5c079e7063a4561bbb9504eed0e5d98a1cc47 Mon Sep 17 00:00:00 2001
+From: randalhsu <xxx@gmail.com>
+Date: Wed, 3 Mar 2021 15:23:32 +0800
 Subject: [PATCH 2/3] Draggable custom price line
 
 ---
@@ -16,7 +16,8 @@ Subject: [PATCH 2/3] Draggable custom price line
  src/model/custom-price-line.ts                |   4 +
  src/model/price-line-options.ts               |   1 +
  src/model/series.ts                           |   4 +
- 12 files changed, 228 insertions(+), 14 deletions(-)
+ src/renderers/walk-line.ts                    |   7 +-
+ 13 files changed, 232 insertions(+), 17 deletions(-)
 
 diff --git a/src/api/chart-api.ts b/src/api/chart-api.ts
 index d95ad9f..7d691e2 100644
@@ -608,6 +609,27 @@ index 8cf8442..c522365 100644
  	public seriesType(): T {
  		return this._seriesType;
  	}
+diff --git a/src/renderers/walk-line.ts b/src/renderers/walk-line.ts
+index f06a695..4baa32b 100644
+--- a/src/renderers/walk-line.ts
++++ b/src/renderers/walk-line.ts
+@@ -15,12 +15,13 @@ export function walkLine(
+ 		return;
+ 	}
+ 
+-	const x = points[visibleRange.from].x as number;
+-	const y = points[visibleRange.from].y as number;
++	const point = JSON.parse(JSON.stringify(points[visibleRange.from]));
++	const x = point.x as number;
++	const y = point.y as number;
+ 	ctx.moveTo(x, y);
+ 
+ 	for (let i = visibleRange.from + 1; i < visibleRange.to; ++i) {
+-		const currItem = points[i];
++		const currItem = JSON.parse(JSON.stringify(points[i]));
+ 
+ 		//  x---x---x   or   x---x   o   or   start
+ 		if (lineType === LineType.WithSteps) {
 -- 
 2.29.0.windows.1
 

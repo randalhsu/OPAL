@@ -815,6 +815,8 @@ function isPairingDirections(obj1, obj2) {
 
 function activateOrder(order, triggeredPrice) {
     let hasClosedAPosition = false;
+    // Close the oldest position first
+    positions.sort((a, b) => a.id - b.id);
     for (const position of positions) {
         if (position.status === 'running' && isPairingDirections(order, position)) {
             closePosition(position, triggeredPrice);
@@ -1081,14 +1083,73 @@ function updatePositionsTable() {
     updatePositionsMarkers();
 }
 
-function updatePositionsMarkers() {
-    const markers = [];
-    positions.forEach((position) => markers.push(...position.toMarkers()));
-    markers.sort((a, b) => a.time - b.time);
-    candleSeries2.setMarkers(markers);
+chart1.positionLines = [];
+chart2.positionLines = [];
 
-    markers.forEach((marker) => marker.time -= marker.time % 3600);
-    candleSeries1.setMarkers(markers);
+function addPositionLines(position, markers) {
+    const lineOptions = {
+        priceLineVisible: false,
+        lastValueVisible: false,
+        baseLineVisible: false,
+        crosshairMarkerVisible: false,
+        color: PRICE_LINE_COLOR[position.type],
+        lineWidth: 1,
+    };
+    const data = [
+        { time: markers[0].time, value: markers[0].price },
+        { time: markers[1].time, value: markers[1].price },
+    ];
+
+    const lineSeries2 = chart2.addLineSeries(lineOptions);
+    lineSeries2.setData(data);
+    lineSeries2.positionId = position.id;
+    chart2.positionLines.push(lineSeries2);
+
+    data.forEach(d => d.time -= d.time % 3600);
+    const lineSeries1 = chart1.addLineSeries(lineOptions);
+    lineSeries1.setData(data);
+    lineSeries1.positionId = position.id;
+    chart1.positionLines.push(lineSeries1);
+}
+
+function trimPositionLines() {
+    const existingPositionIds = positions.map(position => position.id);
+    for (const line2 of chart2.positionLines) {
+        if (existingPositionIds.includes(line2.positionId)) {
+            continue;
+        }
+        chart2.removeSeries(line2);
+        for (const line1 of chart1.positionLines) {
+            if (line1.positionId === line2.positionId) {
+                chart1.removeSeries(line1);
+                chart1.positionLines = chart1.positionLines.filter(line => line !== line1);
+                break;
+            }
+        }
+    }
+    chart2.positionLines = chart2.positionLines.filter(
+        line => existingPositionIds.includes(line.positionId)
+    );
+}
+
+function updatePositionsMarkers() {
+    const allMarkers = [];
+    const existingPositionLineIds = chart2.positionLines.map(line => line.positionId);
+
+    for (const position of positions) {
+        const markers = position.toMarkers();
+        allMarkers.push(...markers);
+        if (markers.length === 2 &&
+            !existingPositionLineIds.includes(position.id)) {
+            addPositionLines(position, markers);
+        }
+    }
+    trimPositionLines();
+
+    allMarkers.sort((a, b) => a.time - b.time);
+    candleSeries2.setMarkers(allMarkers);
+    allMarkers.forEach((marker) => marker.time -= marker.time % 3600);
+    candleSeries1.setMarkers(allMarkers);
 }
 
 let messageQueue = [];

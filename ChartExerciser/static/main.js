@@ -1121,7 +1121,6 @@ function addPositionLines(position, markers) {
         priceLineVisible: false,
         lastValueVisible: false,
         baseLineVisible: false,
-        crosshairMarkerVisible: false,
         color: PRICE_LINE_COLOR[position.type],
         lineWidth: 1,
     };
@@ -1409,6 +1408,8 @@ function step() {
     if (nextIndex < fetchedBars.length) {
         const bar = fetchedBars[nextIndex];
         displayBars.push(bar);
+    } else {
+        showMessage('Waiting for server response...');
     }
 
     const PREFETCH_THRESHOLD = 24;
@@ -1579,6 +1580,10 @@ function registerButtonsHandler() {
 
 function registerKeyboardEventHandler() {
     window.addEventListener('keydown', function (event) {
+        if (document.activeElement === document.getElementById('datetimepicker-input') ||
+            document.activeElement === document.getElementById('alert-price')) {
+            return;
+        }
         //console.log(`KeyboardEvent: code='${event.code}'`);
         switch (event.code) {
             case 'Space':

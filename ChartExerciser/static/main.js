@@ -2,6 +2,7 @@
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm';
+const DATA_TIMEZONE = 'America/New_York';
 const DATA_UTC_OFFSET_HOUR = -5;  // EST
 const DATA_DAILY_OPEN_HOUR = 18;
 
@@ -160,6 +161,34 @@ function getUTCOffsetHours() {
 
 function getUTCOffsetSeconds() {
     return getUTCOffsetHours() * 3600;
+}
+
+function isDST(timestamp) {
+    return moment(timestamp * 1000).tz(DATA_TIMEZONE).isDST();
+}
+
+function getDSTOffsetHours(timestamp) {
+    return isDST(timestamp) ? -1 : 0;
+}
+
+function getDSTOffsetSeconds(timestamp) {
+    return getDSTOffsetHours(timestamp) * 3600;
+}
+
+function convertClientTimestampToServerTimestamp(timestamp) {
+    timestamp -= getUTCOffsetSeconds();
+    timestamp -= getDSTOffsetSeconds(timestamp);
+    return timestamp;
+}
+
+function convertServerTimestampToClientTimestamp(timestamp) {
+    timestamp += getDSTOffsetSeconds(timestamp);
+    timestamp += getUTCOffsetSeconds();
+    return timestamp;
+}
+
+function convertTimestampToStringInUTC(timestamp) {
+    return moment.utc(timestamp * 1000).format(DATETIME_FORMAT);
 }
 
 let tickersInfo = {};
@@ -491,10 +520,11 @@ async function resetAllScales() {
 
 function drawDailyOpenPrice() {
     const localeHourDiff = new Date().getTimezoneOffset() / 60;
+    const lastBar = displayBars[displayBars.length - 1];
+    const userDailyOpenHour = (DATA_DAILY_OPEN_HOUR + getUTCOffsetHours() + getDSTOffsetHours(lastBar.time) + 24) % 24;
+
     for (let i = displayBars.length - 1; i >= 0; --i) {
         const date = new Date(displayBars[i].time * 1000);
-        //TODO: DST may change hour?
-        const userDailyOpenHour = (DATA_DAILY_OPEN_HOUR + getUTCOffsetHours() + 24) % 24;
         if ((date.getHours() + localeHourDiff + 24) % 24 === userDailyOpenHour && date.getMinutes() === 0) {
             const dailyOpenPrice = displayBars[i].open;
             for (const series of [candleSeries1, candleSeries2]) {
@@ -1228,10 +1258,12 @@ function updateDatetimepickerRange(ticker) {
     $('#datetimepicker1').datetimepicker('minDate', veryMinDate);
     $('#datetimepicker1').datetimepicker('maxDate', veryMaxDate);
 
-    const minDate = moment.utc((tickersInfo[ticker].minDate + getUTCOffsetSeconds()) * 1000);
-    const maxDate = moment.utc((tickersInfo[ticker].maxDate + getUTCOffsetSeconds()) * 1000);
-    $('#datetimepicker1').datetimepicker('minDate', minDate.format(DATETIME_FORMAT));
-    $('#datetimepicker1').datetimepicker('maxDate', maxDate.format(DATETIME_FORMAT));
+    const minDateTimestamp = convertServerTimestampToClientTimestamp(tickersInfo[ticker].minDate);
+    const maxDateTimestamp = convertServerTimestampToClientTimestamp(tickersInfo[ticker].maxDate);
+    const minDateString = moment.utc(minDateTimestamp * 1000).format(DATETIME_FORMAT);
+    const maxDateString = moment.utc(maxDateTimestamp * 1000).format(DATETIME_FORMAT);
+    $('#datetimepicker1').datetimepicker('minDate', minDateString);
+    $('#datetimepicker1').datetimepicker('maxDate', maxDateString);
 }
 
 
@@ -1284,6 +1316,10 @@ socket.onmessage = function (e) {
 
 let isPrefetching = false;
 
+function adjustBarsTime(bars) {
+    bars.forEach(bar => bar.time = convertServerTimestampToClientTimestamp(bar.time));
+}
+
 function handleResponse(response) {
     //console.log(response);
     if (response.hasOwnProperty('error')) {
@@ -1305,12 +1341,16 @@ function handleResponse(response) {
             removeAllPositions();
 
             const ticker = response.ticker;
-            const timestamp = response.timestamp + getUTCOffsetSeconds();
             fetchedBars = response.data;
-            fetchedBars.forEach(bar => bar.time += getUTCOffsetSeconds());
+            adjustBarsTime(fetchedBars);
 
-            const endIndex = fetchedBars.map(bar => bar.time).indexOf(timestamp) + 1;
-            displayBars = fetchedBars.slice(0, endIndex);
+            const timestamp = convertServerTimestampToClientTimestamp(response.timestamp);
+            let endIndex = fetchedBars.length - 1;
+            while (endIndex > 0 && fetchedBars[endIndex].time >= timestamp) {
+                --endIndex;
+            }
+            ++endIndex;
+            displayBars = fetchedBars.slice(0, endIndex + 1);
 
             for (const series of [candleSeries1, candleSeries2]) {
                 series.applyOptions({
@@ -1326,14 +1366,13 @@ function handleResponse(response) {
                 messageQueue = [];
             }
 
-            const nowString = moment.utc(getCurrentChartTime() * 1000).format(DATETIME_FORMAT);
-            showMessage(`Jumped to ${nowString}`);
+            showMessage(`Jumped to ${convertTimestampToStringInUTC(getCurrentChartTime())}`);
             break;
 
         case 'prefetch':
             if (response.ticker === getCurrentTicker()) {
                 const prefetchedBars = response.data;
-                prefetchedBars.forEach(bar => bar.time += getUTCOffsetSeconds());
+                adjustBarsTime(prefetchedBars);
                 fetchedBars.push(...prefetchedBars);
             }
             isPrefetching = false;
@@ -1356,7 +1395,8 @@ function commonUpdate() {
 
 function step() {
     const currentTime = getCurrentChartTime();
-    if (currentTime === getTickerInfo().maxDate + getUTCOffsetSeconds()) {
+    const maxDate = convertServerTimestampToClientTimestamp(getTickerInfo().maxDate);
+    if (currentTime === maxDate) {
         showMessage('⚠️ Already reached the end of historial data!');
         return;
     }
@@ -1401,7 +1441,7 @@ function sendInitAction() {
 }
 
 function sendSwitchAction(ticker) {
-    const timestamp = displayBars.length > 0 ? getCurrentChartTime() - getUTCOffsetSeconds() : 0;
+    const timestamp = convertClientTimestampToServerTimestamp(getCurrentChartTime());
     socket.send(JSON.stringify({
         action: 'switch',
         ticker: ticker,
@@ -1410,10 +1450,9 @@ function sendSwitchAction(ticker) {
 }
 
 function sendGotoAction(timestamp) {
-    // Change time
     socket.send(JSON.stringify({
         action: 'goto',
-        timestamp: timestamp,
+        timestamp: convertClientTimestampToServerTimestamp(timestamp),
     }));
 }
 
@@ -1422,7 +1461,8 @@ function sendPrefetchAction() {
         return;
     }
 
-    const timestamp = fetchedBars[fetchedBars.length - 1].time;
+    const lastBar = fetchedBars[fetchedBars.length - 1];
+    const timestamp = convertClientTimestampToServerTimestamp(lastBar.time);
     if (timestamp === getTickerInfo().maxDate) {
         return;
     }
@@ -1430,7 +1470,7 @@ function sendPrefetchAction() {
     isPrefetching = true;
     socket.send(JSON.stringify({
         action: 'prefetch',
-        timestamp: timestamp - getUTCOffsetSeconds(),
+        timestamp: timestamp,
     }));
 }
 
@@ -1584,7 +1624,7 @@ function initDatetimepicker() {
     datetimepickerInput.addEventListener('blur', (event) => {
         const inputTimestamp = moment.utc(event.target.value, DATETIME_FORMAT).unix();
         if (inputTimestamp !== getCurrentChartTime()) {
-            sendGotoAction(inputTimestamp - getUTCOffsetSeconds());
+            sendGotoAction(inputTimestamp);
         }
     });
     datetimepickerInput.addEventListener('keydown', (event) => {

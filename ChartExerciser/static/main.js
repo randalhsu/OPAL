@@ -1130,16 +1130,20 @@ function addPositionLines(position, markers) {
         { time: markers[1].time, value: markers[1].price },
     ];
 
-    const lineSeries2 = chart2.addLineSeries(lineOptions);
-    lineSeries2.setData(data);
-    lineSeries2.positionId = position.id;
-    chart2.positionLines.push(lineSeries2);
+    if (data[0].time !== data[1].time) {
+        const lineSeries2 = chart2.addLineSeries(lineOptions);
+        lineSeries2.setData(data);
+        lineSeries2.positionId = position.id;
+        chart2.positionLines.push(lineSeries2);
+    }
 
     data.forEach(d => d.time -= d.time % 3600);
-    const lineSeries1 = chart1.addLineSeries(lineOptions);
-    lineSeries1.setData(data);
-    lineSeries1.positionId = position.id;
-    chart1.positionLines.push(lineSeries1);
+    if (data[0].time !== data[1].time) {
+        const lineSeries1 = chart1.addLineSeries(lineOptions);
+        lineSeries1.setData(data);
+        lineSeries1.positionId = position.id;
+        chart1.positionLines.push(lineSeries1);
+    }
 }
 
 function trimPositionLines() {

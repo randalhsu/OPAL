@@ -18,6 +18,8 @@ const DEFAULT_CONFIGS = {
     downColor: 'FF3031',
     wickDownColor: 'FF3031',
     borderDownColor: 'FF3031',
+    sma2Period: '0',
+    sma2Color: '17A2B8',
 };
 
 const configs = { ...DEFAULT_CONFIGS };
@@ -98,6 +100,7 @@ function getHexColor(s) {
             ['#26A69A', '#EF5350', '#03FD04', '#FE0000'],
             ['#00B061', '#FF3031', '#0EA600', '#FF0000'],
             ['#FFFFFF', '#252930', '#DDDDDD', '#7E838C'],
+            ['#007BFF', '#6C757D', '#FFC107', '#17A2B8'],
         ],
     };
 
@@ -128,6 +131,24 @@ function getHexColor(s) {
         updateNewURLDisplay();
     }
     $('#color-dailyOpenPrice').spectrum(colorPickerOptions);
+
+    const sma2PeriodInput = document.getElementById('sma2-period');
+    sma2PeriodInput.value = configs.sma2Period;
+    sma2PeriodInput.addEventListener('change', (event) => {
+        if (sma2PeriodInput.checkValidity()) {
+            configs.sma2Period = event.target.value;
+            updateSMA();
+            updateNewURLDisplay();
+        }
+    });
+
+    colorPickerOptions.color = getHexColor(configs.sma2Color);
+    colorPickerOptions.change = (color) => {
+        configs.sma2Color = color.toHex().toUpperCase();
+        updateSMA();
+        updateNewURLDisplay();
+    }
+    $('#color-sma2').spectrum(colorPickerOptions);
 
     const mapping = {
         'upColor': getHexColor(configs.upColor),
@@ -426,12 +447,20 @@ function updateInfoPanel(param) {
         return;
     }
     const precision = getTickerInfo().precision;
+    let smaContent = '';
+    if (mouseOverChart2 && configs.sma2Period > 0) {
+        const smaPrice = param.seriesPrices.get(chart2.smaLineSeries);
+        if (smaPrice !== undefined) {
+            smaContent = `SMA: ${smaPrice.toFixed(precision)}`;
+        }
+    }
     panel.innerHTML = `
         <div class="text-center">
             <div>O: ${prices.open.toFixed(precision)}</div>
             <div>H: ${prices.high.toFixed(precision)}</div>
             <div>L: ${prices.low.toFixed(precision)}</div>
             <div>C: ${prices.close.toFixed(precision)}</div>
+            <div style="font-size:0.9em">${smaContent}</div>
             <div style="font-size:0.7em">Press D to toggle</div>
         </div>
     `;
@@ -613,6 +642,38 @@ function attachDailyOpenPriceLineToSeries(series, price) {
         lineWidth: 2,
         lineStyle: LightweightCharts.LineStyle.Solid,
     });
+}
+
+(function attachSMALineToChart() {
+    chart2.smaLineSeries = chart2.addLineSeries({
+        crosshairMarkerVisible: false,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        baseLineVisible: false,
+        color: getHexColor(DEFAULT_CONFIGS.sma2Color),
+        lineWidth: 1,
+    });
+})();
+
+function calculateSMA(bars, period) {
+    const avg = (array) => array.map(bar => bar.close).reduce((p, c, i) => p + (c - p) / (i + 1), 0);
+    const result = [];
+    for (let i = period - 1; i < bars.length; ++i) {
+        const val = avg(bars.slice(i - period + 1, i + 1));
+        result.push({ time: bars[i].time, value: val });
+    }
+    return result;
+}
+
+function updateSMA() {
+    const period = parseInt(configs.sma2Period);
+    if (isNaN(period) || period < 1) {
+        chart2.smaLineSeries.setData([]);
+        return;
+    }
+    const smaData = calculateSMA(displayBars, period);
+    chart2.smaLineSeries.applyOptions({ color: getHexColor(configs.sma2Color) });
+    chart2.smaLineSeries.setData(smaData);
 }
 
 
@@ -1455,6 +1516,7 @@ function commonUpdate() {
 
     updateSeriesPriceScales(candleSeries1, candleSeries2);
     drawDailyOpenPrice();
+    updateSMA();
     updateDatetimepickerCurrentDatetime(getCurrentChartTime());
     updateOrdersTable();
     updatePositionsTable();

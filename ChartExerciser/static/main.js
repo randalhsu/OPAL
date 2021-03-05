@@ -368,6 +368,8 @@ function crosshair1SyncHandler(e) {
         chart2.setCrossHairXY(xx, yy, true);
         mouseHoverPriceString = chart1.priceScale('left').formatPrice(price);
     }
+
+    updateInfoPanel(e);
 }
 
 function crosshair2SyncHandler(e) {
@@ -392,6 +394,67 @@ function crosshair2SyncHandler(e) {
         chart1.setCrossHairXY(xx, yy, true);
         mouseHoverPriceString = chart2.priceScale('right').formatPrice(price);
     }
+
+    updateInfoPanel(e);
+}
+
+let shouldDisplayInfoPanel = false;
+
+function updateInfoPanel(param) {
+    const panel = document.getElementById('info-panel');
+    if (param === undefined) {
+        panel.style.display = shouldDisplayInfoPanel ? 'block' : 'none';
+        return;
+    }
+    if (!shouldDisplayInfoPanel || getCurrentTicker() === '') {
+        panel.style.display = 'none';
+        return;
+    }
+
+    const chart = mouseOverChart1 ? chart1 : chart2;
+    const width = chart.options().width;
+    const height = chart.options().height;
+    if (!param.time ||
+        param.point.x < 0 || param.point.x > width ||
+        param.point.y < 0 || param.point.y > height) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    const prices = param.seriesPrices.get(mouseOverChart1 ? candleSeries1 : candleSeries2);
+    if (prices === undefined) {
+        return;
+    }
+    const precision = getTickerInfo().precision;
+    panel.innerHTML = `
+        <div class="text-center">
+            <div>O: ${prices.open.toFixed(precision)}</div>
+            <div>H: ${prices.high.toFixed(precision)}</div>
+            <div>L: ${prices.low.toFixed(precision)}</div>
+            <div>C: ${prices.close.toFixed(precision)}</div>
+            <div style="font-size:0.7em">Press D to toggle</div>
+        </div>
+    `;
+
+    const chartEl = document.getElementById(mouseOverChart1 ? 'chart1' : 'chart2');
+    const chartRect = chartEl.querySelector('.tv-lightweight-charts').getBoundingClientRect();
+    const leftPriceScaleWidth = chartEl.querySelector('td').getBoundingClientRect().width;
+    const timeScaleHeight = chartEl.querySelectorAll('tr')[1].getBoundingClientRect().height;
+    const chartLeft = chartRect.left + leftPriceScaleWidth;
+    const margin = 15;
+
+    let left = chartLeft + param.point.x - margin - panel.offsetWidth;
+    if (left < chartLeft) {
+        left = chartLeft + param.point.x + margin;
+    }
+    let top = chartRect.top + param.point.y + margin;
+    if (top > chartRect.bottom - timeScaleHeight - panel.offsetHeight) {
+        top = chartRect.top + param.point.y - margin - panel.offsetHeight;
+    }
+
+    panel.style.left = left + 'px';
+    panel.style.top = top + 'px';
+    panel.style.display = 'block';
 }
 
 chart1.subscribeCrosshairMove(crosshair1SyncHandler);
@@ -1361,6 +1424,7 @@ function handleResponse(response) {
                 });
             }
             commonUpdate();
+            updateInfoPanel();
 
             if (response.action === 'switch') {
                 document.getElementById('current-ticker').innerText = ticker;
@@ -1615,6 +1679,11 @@ function registerKeyboardEventHandler() {
 
             case 'KeyS':
                 addOrder('sell', mouseHoverPriceString);
+                break;
+
+            case 'KeyD':
+                shouldDisplayInfoPanel = !shouldDisplayInfoPanel;
+                updateInfoPanel();
                 break;
         }
     }, true);

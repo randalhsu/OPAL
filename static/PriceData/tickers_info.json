@@ -23,9 +23,33 @@
         "tickValue": 0.5,
         "tickValuePrecision": 1
     },
+    "RTY": {
+        "precision": 1,
+        "minMove": 0.1,
+        "tickValue": 5,
+        "tickValuePrecision": 0
+    },
+    "M2K": {
+        "precision": 1,
+        "minMove": 0.1,
+        "tickValue": 0.5,
+        "tickValuePrecision": 1
+    },
+    "YM": {
+        "precision": 0,
+        "minMove": 1,
+        "tickValue": 5,
+        "tickValuePrecision": 0
+    },
     "CL": {
         "precision": 2,
         "minMove": 0.01,
+        "tickValue": 10,
+        "tickValuePrecision": 0
+    },
+    "NG": {
+        "precision": 3,
+        "minMove": 0.001,
         "tickValue": 10,
         "tickValuePrecision": 0
     },
@@ -34,5 +58,71 @@
         "minMove": 0.1,
         "tickValue": 10,
         "tickValuePrecision": 0
+    },
+    "SI": {
+        "precision": 3,
+        "minMove": 0.005,
+        "tickValue": 25,
+        "tickValuePrecision": 0
+    },
+    "ZC": {
+        "precision": 2,
+        "minMove": 0.25,
+        "tickValue": 12.5,
+        "tickValuePrecision": 1
+    },
+    "ZS": {
+        "precision": 2,
+        "minMove": 0.25,
+        "tickValue": 12.5,
+        "tickValuePrecision": 1
+    },
+    "BTC": {
+        "precision": 0,
+        "minMove": 5,
+        "tickValue": 25,
+        "tickValuePrecision": 0
+    },
+    "6A": {
+        "precision": 5,
+        "minMove": 0.00005,
+        "tickValue": 5,
+        "tickValuePrecision": 0
+    },
+    "6B": {
+        "precision": 4,
+        "minMove": 0.0001,
+        "tickValue": 6.25,
+        "tickValuePrecision": 2
+    },
+    "6C": {
+        "precision": 5,
+        "minMove": 0.00005,
+        "tickValue": 5,
+        "tickValuePrecision": 0
+    },
+    "6E": {
+        "precision": 5,
+        "minMove": 0.00005,
+        "tickValue": 6.25,
+        "tickValuePrecision": 2
+    },
+    "6J": {
+        "precision": 7,
+        "minMove": 0.0000005,
+        "tickValue": 6.25,
+        "tickValuePrecision": 2
+    },
+    "6N": {
+        "precision": 4,
+        "minMove": 0.0001,
+        "tickValue": 10,
+        "tickValuePrecision": 0
+    },
+    "6S": {
+        "precision": 4,
+        "minMove": 0.0001,
+        "tickValue": 12.5,
+        "tickValuePrecision": 1
     }
 }

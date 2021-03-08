@@ -198,12 +198,14 @@ class PriceConsumer(WebsocketConsumer):
             })
             return response
 
-        elif action == 'switch':
-            ticker = message.get('ticker')
-            if not self.set_ticker(ticker):
-                response.update({'error': 'unknown ticker'})
-                return response
+        ticker = message.get('ticker')
+        if self.set_ticker(ticker):
+            response.update({'ticker': self.ticker})
+        else:
+            response.update({'error': 'unknown ticker'})
+            return response
 
+        if action == 'switch':
             timestamp = message.get('timestamp')
             # check if current timestamp fits into new ticker's time range
             if self.is_valid_timestamp(timestamp):
@@ -226,7 +228,6 @@ class PriceConsumer(WebsocketConsumer):
                 response.update({'error': 'invalid timestamp'})
                 return response
 
-            response.update({'ticker': self.ticker})
             time = convert_timestamp_to_datetime(timestamp)
 
             if action == 'goto':

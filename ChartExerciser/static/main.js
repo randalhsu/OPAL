@@ -1321,7 +1321,7 @@ function dedupMessageQueue() {
     const uniqueArray = [];
     for (const [message, timeout] of messageQueue) {
         let found = false;
-        if (message.includes('⚠')) {
+        if (message.includes('⚠️')) {
             for (const [m, t] of uniqueArray) {
                 if (message === m && timeout === t) {
                     found = true;
@@ -1364,7 +1364,7 @@ function registerChangeTickerHandler() {
             const currentTicker = currentTickerNode.innerText;
             if (ticker !== currentTicker) {
                 currentTickerNode.innerText = ticker;
-                sendSwitchAction(ticker);
+                sendSwitchAction();
             }
         }
     }
@@ -1394,23 +1394,33 @@ function updateDatetimepickerRange(ticker) {
 }
 
 
-function makeWebSocketConnection() {
-    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    return new WebSocket(`${wsScheme}://${window.location.host}/socket`);
-}
+let isPrefetching = false;
 
-const socket = makeWebSocketConnection();
-
-socket.onopen = function (e) {
+function initialize() {
     initDatetimepicker();
     registerChangeTickerHandler();
     registerButtonsHandler();
     registerKeyboardEventHandler();
+    registerChartResizersHandler();
     updateAlertsTable();
     updateOrdersTable();
     updatePositionsTable();
-    registerChartResizersHandler();
+}
 
+const socket = (function makeWebSocketConnection() {
+    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    return new ReconnectingWebSocket(`${wsScheme}://${window.location.host}/socket`);
+})();
+
+socket.onopen = function (e) {
+    console.log('socket opened, hello');
+    isPrefetching = false;
+    showMessage('✔️ Connected to the server');
+    if (!$.isEmptyObject(tickersInfo)) {
+        return;
+    }
+
+    initialize();
     sendInitAction();
 
     // Show Help dialog if explicitly instructed in URL params
@@ -1441,8 +1451,6 @@ socket.onmessage = function (e) {
     }
 }
 
-let isPrefetching = false;
-
 function adjustBarsTime(bars) {
     bars.forEach(bar => bar.time = convertServerTimestampToClientTimestamp(bar.time));
 }
@@ -1450,7 +1458,7 @@ function adjustBarsTime(bars) {
 function handleResponse(response) {
     //console.log(response);
     if (response.hasOwnProperty('error')) {
-        showMessage('⚠ SERVER ERROR: ' + response.error);
+        showMessage('⚠️ ERROR: ' + response.error);
         return;
     }
 
@@ -1535,7 +1543,7 @@ function step() {
         const bar = fetchedBars[nextIndex];
         displayBars.push(bar);
     } else {
-        showMessage('Waiting for server response...');
+        showMessage('⚠️ Waiting for server response...');
     }
 
     const PREFETCH_THRESHOLD = 24;
@@ -1560,11 +1568,11 @@ function stepback() {
 }
 
 socket.onclose = function (e) {
-    console.log('close bye');
+    console.log('socket closed, bye');
 }
 
 socket.onerror = function (e) {
-    console.log('error bye');
+    showMessage('⚠️ ERROR: Server seems down!', 10000);
 }
 
 function sendInitAction() {
@@ -1572,6 +1580,7 @@ function sendInitAction() {
 }
 
 function sendSwitchAction(ticker) {
+    ticker = ticker || getCurrentTicker();
     const timestamp = convertClientTimestampToServerTimestamp(getCurrentChartTime());
     socket.send(JSON.stringify({
         action: 'switch',
@@ -1583,6 +1592,7 @@ function sendSwitchAction(ticker) {
 function sendGotoAction(timestamp) {
     socket.send(JSON.stringify({
         action: 'goto',
+        ticker: getCurrentTicker(),
         timestamp: convertClientTimestampToServerTimestamp(timestamp),
     }));
 }
@@ -1601,6 +1611,7 @@ function sendPrefetchAction() {
     isPrefetching = true;
     socket.send(JSON.stringify({
         action: 'prefetch',
+        ticker: getCurrentTicker(),
         timestamp: timestamp,
     }));
 }

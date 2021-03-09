@@ -1,6 +1,5 @@
 'use strict';
 
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm';
 const DATA_TIMEZONE = 'America/New_York';
 const DATA_UTC_OFFSET_HOUR = -5;  // EST
@@ -424,7 +423,7 @@ let shouldDisplayInfoPanel = false;
 function updateInfoPanel(param) {
     const panel = document.getElementById('info-panel');
     if (param === undefined) {
-        panel.style.display = shouldDisplayInfoPanel ? 'block' : 'none';
+        panel.style.display = shouldDisplayInfoPanel ? 'table' : 'none';
         return;
     }
     if (!shouldDisplayInfoPanel || getCurrentTicker() === '') {
@@ -455,7 +454,7 @@ function updateInfoPanel(param) {
         }
     }
     panel.innerHTML = `
-        <div class="text-center">
+        <div class="text-center" style="height:max-content">
             <div>O: ${prices.open.toFixed(precision)}</div>
             <div>H: ${prices.high.toFixed(precision)}</div>
             <div>L: ${prices.low.toFixed(precision)}</div>
@@ -855,7 +854,12 @@ function checkIfAlertTriggered() {
     return hasTriggeredAlert;
 }
 
+let audioCtx = null;
+
 function beep(frequency = 718, type = 'triangle', volume = 0.1, duration = 250) {
+    if (audioCtx === null) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     oscillator.connect(gainNode);
@@ -1413,7 +1417,7 @@ const socket = (function makeWebSocketConnection() {
 })();
 
 socket.onopen = function (e) {
-    console.log('socket opened, hello');
+    console.log(`[${new Date().toLocaleTimeString('en-GB')}] socket opened, hello`);
     isPrefetching = false;
     showMessage('✔️ Connected to the server');
     if (!$.isEmptyObject(tickersInfo)) {
@@ -1568,11 +1572,11 @@ function stepback() {
 }
 
 socket.onclose = function (e) {
-    console.log('socket closed, bye');
+    console.log(`[${new Date().toLocaleTimeString('en-GB')}] socket closed, bye`);
 }
 
 socket.onerror = function (e) {
-    showMessage('⚠️ ERROR: Server seems down!', 10000);
+    showMessage('⚠️ ERROR: Server too busy or down!', 5000);
 }
 
 function sendInitAction() {
@@ -1791,4 +1795,7 @@ function initDatetimepicker() {
 
 window.onbeforeunload = function () {
     socket.close();
+    if (audioCtx !== null) {
+        audioCtx.close();
+    }
 };

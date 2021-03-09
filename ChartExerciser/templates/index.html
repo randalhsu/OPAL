@@ -16,13 +16,8 @@
       .floating-panel {
         display: none;
         background-color: #FFFFFF7F;
-        width: 130px;
-        height: 128px;
+        width: max-content;
         padding: 8px;
-        font-size: 1rem;
-        font-weight: 400;
-        line-height: 1.5;
-        pointer-events: none;
         z-index: 1030;
       }
       .floating-panel div {
@@ -154,7 +149,7 @@
             <div class="col"><input type="text" id="color-axes-text"/></div>
           </div>
           <div class="row mt-2 mb-4">
-            <div class="col">Daily open price <abbr title="To hide this line, set it as the same color as Background's.">🛈</abbr>:</div>
+            <div class="col">Daily open price <abbr title="To hide this line, set its color the same as Background's.">🛈</abbr>:</div>
             <div class="col"><input type="text" id="color-dailyOpenPrice"/></div>
             <div class="col"></div>
             <div class="col"></div>
@@ -178,7 +173,7 @@
             <div class="col"><input type="text" id="color-borderDownColor"/></div>
           </div>
           <div class="row mt-4">
-            <div class="col">SMA period <abbr title="To hide SMA, set its period as 0.">🛈</abbr>:</div>
+            <div class="col"><abbr title="Simple Moving Average">SMA</abbr> period <abbr title="To hide SMA, set its period as 0.">🛈</abbr>:</div>
             <div class="col"><input type="number" value="0" min="0" step="1" class="w-50" id="sma2-period" required/></div>
             <div class="col">SMA:</div>
             <div class="col"><input type="text" id="color-sma2"/></div>

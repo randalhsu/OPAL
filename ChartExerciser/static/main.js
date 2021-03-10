@@ -17,8 +17,14 @@ const DEFAULT_CONFIGS = {
     downColor: 'FF3031',
     wickDownColor: 'FF3031',
     borderDownColor: 'FF3031',
-    sma2Period: '0',
-    sma2Color: '17A2B8',
+    sma11Period: '0',
+    sma11Color: 'DDDDDD',
+    sma21Period: '0',
+    sma21Color: '007BFF',
+    sma22Period: '0',
+    sma22Color: '17A2B8',
+    sma23Period: '0',
+    sma23Color: '6C757D',
 };
 
 const configs = { ...DEFAULT_CONFIGS };
@@ -131,23 +137,25 @@ function getHexColor(s) {
     }
     $('#color-dailyOpenPrice').spectrum(colorPickerOptions);
 
-    const sma2PeriodInput = document.getElementById('sma2-period');
-    sma2PeriodInput.value = configs.sma2Period;
-    sma2PeriodInput.addEventListener('change', (event) => {
-        if (sma2PeriodInput.checkValidity()) {
-            configs.sma2Period = event.target.value;
+    for (const sma of ['sma11', 'sma21', 'sma22', 'sma23']) {
+        const smaPeriodInput = document.getElementById(`${sma}-period`);
+        smaPeriodInput.value = configs[`${sma}Period`];
+        smaPeriodInput.addEventListener('change', (event) => {
+            if (smaPeriodInput.checkValidity()) {
+                configs[`${sma}Period`] = event.target.value;
+                updateSMA();
+                updateNewURLDisplay();
+            }
+        });
+
+        colorPickerOptions.color = getHexColor(configs[`${sma}Color`]);
+        colorPickerOptions.change = (color) => {
+            configs[`${sma}Color`] = color.toHex().toUpperCase();
             updateSMA();
             updateNewURLDisplay();
         }
-    });
-
-    colorPickerOptions.color = getHexColor(configs.sma2Color);
-    colorPickerOptions.change = (color) => {
-        configs.sma2Color = color.toHex().toUpperCase();
-        updateSMA();
-        updateNewURLDisplay();
+        $(`#color-${sma}`).spectrum(colorPickerOptions);
     }
-    $('#color-sma2').spectrum(colorPickerOptions);
 
     const mapping = {
         'upColor': getHexColor(configs.upColor),
@@ -447,19 +455,30 @@ function updateInfoPanel(param) {
     }
     const precision = getTickerInfo().precision;
     let smaContent = '';
-    if (mouseOverChart2 && configs.sma2Period > 0) {
-        const smaPrice = param.seriesPrices.get(chart2.smaLineSeries);
-        if (smaPrice !== undefined) {
-            smaContent = `SMA: ${smaPrice.toFixed(precision)}`;
+    for (const sma of ['sma11', 'sma21', 'sma22', 'sma23']) {
+        if ((mouseOverChart1 && sma[3] === '2') ||
+            (mouseOverChart2 && sma[3] === '1')) {
+            continue;
         }
+        const chart = sma[3] === '1' ? chart1 : chart2;
+        const period = configs[`${sma}Period`];
+        if (period < 1) {
+            continue;
+        }
+        const smaPrice = param.seriesPrices.get(chart[`${sma}LineSeries`]);
+        if (smaPrice === undefined) {
+            continue;
+        }
+        smaContent += `SMA(${period}): ${smaPrice.toFixed(precision)}<br/>`;
     }
+
     panel.innerHTML = `
         <div class="text-center" style="height:max-content">
             <div>O: ${prices.open.toFixed(precision)}</div>
             <div>H: ${prices.high.toFixed(precision)}</div>
             <div>L: ${prices.low.toFixed(precision)}</div>
             <div>C: ${prices.close.toFixed(precision)}</div>
-            <div style="font-size:0.9em">${smaContent}</div>
+            <p style="font-size:0.9em;margin:4px">${smaContent}</p>
             <div style="font-size:0.7em">Press D to toggle</div>
         </div>
     `;
@@ -643,15 +662,19 @@ function attachDailyOpenPriceLineToSeries(series, price) {
     });
 }
 
-(function attachSMALineToChart() {
-    chart2.smaLineSeries = chart2.addLineSeries({
+(function attachSMALinesToCharts() {
+    const lineOptions = {
         crosshairMarkerVisible: false,
         priceLineVisible: false,
         lastValueVisible: false,
         baseLineVisible: false,
-        color: getHexColor(DEFAULT_CONFIGS.sma2Color),
         lineWidth: 1,
-    });
+    };
+    for (const sma of ['sma11', 'sma21', 'sma22', 'sma23']) {
+        const chart = sma[3] === '1' ? chart1 : chart2;
+        lineOptions.color = getHexColor(DEFAULT_CONFIGS[`${sma}Color`]);
+        chart[`${sma}LineSeries`] = chart.addLineSeries(lineOptions);
+    }
 })();
 
 function calculateSMA(bars, period) {
@@ -665,14 +688,18 @@ function calculateSMA(bars, period) {
 }
 
 function updateSMA() {
-    const period = parseInt(configs.sma2Period);
-    if (isNaN(period) || period < 1) {
-        chart2.smaLineSeries.setData([]);
-        return;
+    for (const sma of ['sma11', 'sma21', 'sma22', 'sma23']) {
+        const chart = sma[3] === '1' ? chart1 : chart2;
+        const period = parseInt(configs[`${sma}Period`]);
+        if (isNaN(period) || period < 1) {
+            chart[`${sma}LineSeries`].setData([]);
+            continue;
+        }
+        const bars = sma[3] === '1' ? hourlyBars : displayBars;
+        const smaData = calculateSMA(bars, period);
+        chart[`${sma}LineSeries`].applyOptions({ color: getHexColor(configs[`${sma}Color`]) });
+        chart[`${sma}LineSeries`].setData(smaData);
     }
-    const smaData = calculateSMA(displayBars, period);
-    chart2.smaLineSeries.applyOptions({ color: getHexColor(configs.sma2Color) });
-    chart2.smaLineSeries.setData(smaData);
 }
 
 
@@ -1521,8 +1548,10 @@ function handleResponse(response) {
     }
 }
 
+let hourlyBars = [];
+
 function commonUpdate() {
-    const hourlyBars = resampleToHourlyBars(displayBars);
+    hourlyBars = resampleToHourlyBars(displayBars);
     candleSeries1.setData(hourlyBars);
     candleSeries2.setData(displayBars);
 

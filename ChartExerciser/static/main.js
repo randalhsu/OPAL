@@ -1664,6 +1664,10 @@ async function startFastForward() {
 function registerButtonsHandler() {
     // Since "Space" is an important hotkey, always blur in order to prevent Space triggering buttons
 
+    document.getElementById('dropdownMenuButton').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+    });
+
     document.getElementById('step-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
         step();
@@ -1698,6 +1702,10 @@ function registerButtonsHandler() {
         });
         alertPriceInput.val(getLastPrice());
     });
+    $('#createAlertModal').on('shown.bs.modal', function () {
+        alertPriceInput.focus();
+    });
+
     createAlertConfirmButton.addEventListener('click', function (e) {
         $('#createAlertModal').modal('hide');
         addAlert(alertPriceInput.val().toString());

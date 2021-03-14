@@ -1352,7 +1352,7 @@ function dedupMessageQueue() {
     const uniqueArray = [];
     for (const [message, timeout] of messageQueue) {
         let found = false;
-        if (message.includes('⚠️')) {
+        if (message.includes('😭')) {
             for (const [m, t] of uniqueArray) {
                 if (message === m && timeout === t) {
                     found = true;
@@ -1489,7 +1489,7 @@ function adjustBarsTime(bars) {
 function handleResponse(response) {
     //console.log(response);
     if (response.hasOwnProperty('error')) {
-        showMessage('⚠️ ERROR: ' + response.error);
+        showMessage('😭 ' + response.error);
         return;
     }
 
@@ -1567,7 +1567,7 @@ function step() {
     const currentTime = getCurrentChartTime();
     const maxDate = convertServerTimestampToClientTimestamp(getTickerInfo().maxDate);
     if (currentTime === maxDate) {
-        showMessage('⚠️ Already reached the end of historial data!');
+        showMessage('😭 Already reached the end of historial data!');
         return;
     }
 
@@ -1576,7 +1576,7 @@ function step() {
         const bar = fetchedBars[nextIndex];
         displayBars.push(bar);
     } else {
-        showMessage('⚠️ Waiting for server response...');
+        showMessage('😭 Waiting for server response...');
     }
 
     const PREFETCH_THRESHOLD = 24;
@@ -1593,7 +1593,7 @@ function step() {
 
 function stepback() {
     if (displayBars.length <= 1) {
-        showMessage('⚠️ Already reached the first bar!');
+        showMessage('😭 Already reached the first bar!');
         return;
     }
     displayBars.pop();
@@ -1605,7 +1605,8 @@ socket.onclose = function (e) {
 }
 
 socket.onerror = function (e) {
-    showMessage('⚠️ ERROR: Server too busy or down!', 5000);
+    console.log(`[${new Date().toLocaleTimeString('en-GB')}] socket error`);
+    showMessage('😭 Server too busy or down!', 5000);
 }
 
 function sendInitAction() {

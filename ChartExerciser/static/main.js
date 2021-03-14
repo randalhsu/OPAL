@@ -1849,11 +1849,19 @@ function registerKeyboardEventHandler() {
                 break;
 
             case 'KeyB':
-                addOrder('buy', mouseHoverPriceString);
+                if (event.shiftKey) {
+                    addMarketOrder('buy');
+                } else {
+                    addOrder('buy', mouseHoverPriceString);
+                }
                 break;
 
             case 'KeyS':
-                addOrder('sell', mouseHoverPriceString);
+                if (event.shiftKey) {
+                    addMarketOrder('sell');
+                } else {
+                    addOrder('sell', mouseHoverPriceString);
+                }
                 break;
 
             case 'KeyD':

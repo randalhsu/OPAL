@@ -962,34 +962,94 @@ function removeAllOrders() {
     orders.forEach(order => removeOrder(order));
 }
 
+function sortOrders(ascending = true) {
+    orders.sort((a, b) => (+a.priceString) - (+b.priceString));
+    if (ascending === false) {
+        orders.reverse();
+    }
+}
+
 function checkIfOrderTriggered() {
+    if (displayBars.length < 2) {
+        return false;
+    }
     let hasTriggeredOrder = false;
-    if (displayBars.length >= 2) {
-        const lastBar = displayBars[displayBars.length - 1];
-        const secondLastBar = displayBars[displayBars.length - 2];
-        const isAscending = lastBar.open > secondLastBar.close;
+    const lastBar = displayBars[displayBars.length - 1];
+    const secondLastBar = displayBars[displayBars.length - 2];
 
-        orders.sort((a, b) => (+a.priceString) - (+b.priceString));
-        positions.sort((a, b) => a.id - b.id);
-        if (!isAscending) {
-            orders.reverse();
+    // Trigger by gap
+    for (const order of orders) {
+        const price = +order.priceString;
+        if ((secondLastBar.close <= price && price < lastBar.open) ||
+            (secondLastBar.close >= price && price > lastBar.open)) {
+            activateOrder(order, lastBar.open);
+            hasTriggeredOrder = true;
         }
+    }
 
+    const bar = lastBar;
+    if (bar.open <= bar.close) {
+        /*   Simulated order triggering sequence: (1) start from O, (2) down to L, (3) up to H.
+         *
+         *   H  |             /\
+         *      |            /  \
+         *   C ---          /    \
+         *     | |         /
+         *     | |        /
+         *     | |       /
+         *   O --- \    /
+         *      |   \  /
+         *   L  |    \/
+         *         Time ->
+         */
+        sortOrders(false);
         for (const order of orders) {
             const price = +order.priceString;
-            const isTriggeredByGap =
-                (isAscending && (secondLastBar.close < price && price <= lastBar.open)) ||
-                (!isAscending && (secondLastBar.close > price && price >= lastBar.open));
-
-            if (isTriggeredByGap) {
-                activateOrder(order, lastBar.open);
+            if (bar.low <= price && price <= bar.open) {
+                activateOrder(order, price);
                 hasTriggeredOrder = true;
-            } else if (lastBar.low <= price && price <= lastBar.high) {
+            }
+        }
+        sortOrders();
+        for (const order of orders) {
+            const price = +order.priceString;
+            if (bar.open < price && price <= bar.high) {
+                activateOrder(order, price);
+                hasTriggeredOrder = true;
+            }
+        }
+    } else {
+        /*   Simulated order triggering sequence: (1) start from O, (2) up to H, (3) down to L.
+         *
+         *   H  |    /\
+         *      |   /  \
+         *   O --- /    \
+         *     | |       \
+         *     | |        \
+         *     | |         \
+         *   C ---          \    /
+         *      |            \  /
+         *   L  |             \/
+         *         Time ->
+         */
+        sortOrders();
+        for (const order of orders) {
+            const price = +order.priceString;
+            if (bar.open <= price && price <= bar.high) {
+                activateOrder(order, price);
+                hasTriggeredOrder = true;
+            }
+        }
+        sortOrders(false);
+        for (const order of orders) {
+            const price = +order.priceString;
+            if (bar.low <= price && price < bar.open) {
                 activateOrder(order, price);
                 hasTriggeredOrder = true;
             }
         }
     }
+
     return hasTriggeredOrder;
 }
 
@@ -1037,7 +1097,7 @@ function updateOrdersTable() {
     } else {
         const lastPrice = getLastPrice();
         const tickerInfo = getTickerInfo();
-        orders.sort((a, b) => (+b.priceString) - (+a.priceString));
+        sortOrders(false);
 
         for (const order of orders) {
             const li = document.createElement('li');

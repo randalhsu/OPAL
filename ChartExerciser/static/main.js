@@ -472,6 +472,14 @@ function updateInfoPanel(param) {
         smaContent += `SMA(${period}): ${smaPrice.toFixed(precision)}<br/>`;
     }
 
+    const price = +mouseHoverPriceString;
+    const tickerInfo = getTickerInfo();
+    let distanceTicks = Math.floor((getLastPrice() - price) / tickerInfo.minMove);
+    const arrow = distanceTicks > 0 ? '🡶' : distanceTicks < 0 ? '🡵' : '🡲';
+    distanceTicks = Math.abs(distanceTicks);
+    const distanceDollars = convertDollarsToString(distanceTicks * tickerInfo.tickValue);
+    const distanceContent = `${arrow} ${distanceTicks} ticks<br/>${arrow} $${distanceDollars}`;
+
     panel.innerHTML = `
         <div class="text-center" style="height:max-content">
             <div>O: ${prices.open.toFixed(precision)}</div>
@@ -479,6 +487,7 @@ function updateInfoPanel(param) {
             <div>L: ${prices.low.toFixed(precision)}</div>
             <div>C: ${prices.close.toFixed(precision)}</div>
             <p style="font-size:0.9em;margin:4px">${smaContent}</p>
+            <p style="font-size:0.9em;margin:4px">${distanceContent}</p>
             <div style="font-size:0.7em">Press D to toggle</div>
         </div>
     `;

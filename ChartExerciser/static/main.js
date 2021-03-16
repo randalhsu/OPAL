@@ -374,55 +374,53 @@ let mouseOverChart1 = false;
 let mouseOverChart2 = false;
 let mouseHoverPriceString = null;
 
-function crosshair1SyncHandler(e) {
-    if (e.point === undefined) {
-        // triggered by mouse leave event
-        if (mouseOverChart1) {
-            mouseOverChart1 = false;
-            chart2.clearCrossHair();
-            mouseHoverPriceString = null;
-        }
-    } else {
+function registerChartsMouseEventHandler() {
+    const chart1El = document.getElementById('chart1').querySelector('.tv-lightweight-charts').querySelectorAll('td')[1];
+    chart1El.addEventListener('mouseenter', () => {
         mouseOverChart1 = true;
-        let xx = 0;
-        if (e.time !== undefined) {
-            xx = chart2.timeScale().timeToCoordinate(e.time);
-            if (xx === null) {
-                xx = chart2.timeScale().timeToCoordinate(e.time - (e.time % 3600));
-            }
-        }
-        const price = candleSeries1.coordinateToPrice(e.point.y);
-        const yy = candleSeries2.priceToCoordinate(price);
-        chart2.setCrossHairXY(xx, yy, true);
-        mouseHoverPriceString = chart1.priceScale('left').formatPrice(price);
+    });
+    chart1El.addEventListener('mouseleave', () => {
+        mouseOverChart1 = false;
+        chart2.clearCrossHair();
+        mouseHoverPriceString = null;
+        updateInfoPanel();
+    });
+
+    const chart2El = document.getElementById('chart2').querySelector('.tv-lightweight-charts').querySelectorAll('td')[1];
+    chart2El.addEventListener('mouseenter', () => {
+        mouseOverChart2 = true;
+    });
+    chart2El.addEventListener('mouseleave', () => {
+        mouseOverChart2 = false;
+        chart1.clearCrossHair();
+        mouseHoverPriceString = null;
+        updateInfoPanel();
+    });
+}
+
+function crosshair1SyncHandler(e) {
+    if (!mouseOverChart1 || e.point === undefined) {
+        return;
     }
 
+    const xx = e.time === undefined ? 0 : chart2.timeScale().timeToCoordinate(e.time);
+    const price = candleSeries1.coordinateToPrice(e.point.y);
+    const yy = candleSeries2.priceToCoordinate(price);
+    chart2.setCrossHairXY(xx, yy, true);
+    mouseHoverPriceString = chart1.priceScale('left').formatPrice(price);
     updateInfoPanel(e);
 }
 
 function crosshair2SyncHandler(e) {
-    if (e.point === undefined) {
-        // triggered by mouse leave event
-        if (mouseOverChart2) {
-            mouseOverChart2 = false;
-            chart1.clearCrossHair();
-            mouseHoverPriceString = null;
-        }
-    } else {
-        mouseOverChart2 = true;
-        let xx = 0;
-        if (e.time !== undefined) {
-            xx = chart1.timeScale().timeToCoordinate(e.time);
-            if (xx === null) {
-                xx = chart1.timeScale().timeToCoordinate(e.time - (e.time % 3600));
-            }
-        }
-        const price = candleSeries2.coordinateToPrice(e.point.y);
-        const yy = candleSeries1.priceToCoordinate(price);
-        chart1.setCrossHairXY(xx, yy, true);
-        mouseHoverPriceString = chart2.priceScale('right').formatPrice(price);
+    if (!mouseOverChart2 || e.point === undefined) {
+        return;
     }
 
+    const xx = e.time === undefined ? 0 : chart1.timeScale().timeToCoordinate(e.time - (e.time % 3600));
+    const price = candleSeries2.coordinateToPrice(e.point.y);
+    const yy = candleSeries1.priceToCoordinate(price);
+    chart1.setCrossHairXY(xx, yy, true);
+    mouseHoverPriceString = chart2.priceScale('right').formatPrice(price);
     updateInfoPanel(e);
 }
 
@@ -430,12 +428,13 @@ let shouldDisplayInfoPanel = false;
 
 function updateInfoPanel(param) {
     const panel = document.getElementById('info-panel');
-    if (param === undefined) {
-        panel.style.display = shouldDisplayInfoPanel ? 'table' : 'none';
+    if (!shouldDisplayInfoPanel || getCurrentTicker() === '' ||
+        !(mouseOverChart1 || mouseOverChart2)) {
+        panel.style.display = 'none';
         return;
     }
-    if (!shouldDisplayInfoPanel || getCurrentTicker() === '') {
-        panel.style.display = 'none';
+    if (param === undefined) {
+        panel.style.display = shouldDisplayInfoPanel ? 'table' : 'none';
         return;
     }
 
@@ -1500,6 +1499,7 @@ function initialize() {
     initDatetimepicker();
     registerChangeTickerHandler();
     registerButtonsHandler();
+    registerChartsMouseEventHandler();
     registerKeyboardEventHandler();
     registerChartResizersHandler();
     updateAlertsTable();
@@ -1593,7 +1593,6 @@ function handleResponse(response) {
                 });
             }
             commonUpdate();
-            updateInfoPanel();
 
             if (response.action === 'switch') {
                 document.getElementById('current-ticker').innerText = ticker;
@@ -1675,7 +1674,7 @@ socket.onclose = function (e) {
 
 socket.onerror = function (e) {
     console.log(`[${new Date().toLocaleTimeString('en-GB')}] socket error`);
-    showMessage('😭 Server too busy or down!', 5000);
+    showMessage('😭 Server seems down! Reconnecting...', 3000);
 }
 
 function sendInitAction() {

@@ -1737,6 +1737,10 @@ function registerButtonsHandler() {
         $(this).trigger('blur');
     });
 
+    document.getElementById('stepback-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+        stepback();
+    });
     document.getElementById('step-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
         step();

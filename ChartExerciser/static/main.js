@@ -586,6 +586,15 @@ function getCurrentTicker() {
     return document.getElementById('current-ticker').innerText;
 }
 
+function setCurrentTicker(ticker) {
+    if (tickersInfo.hasOwnProperty(ticker)) {
+        document.getElementById('current-ticker').innerText = ticker;
+        updateDatetimepickerRange(ticker);
+        return true;
+    }
+    return false;
+}
+
 function getTickerInfo(ticker) {
     const currentTicker = ticker || getCurrentTicker();
     return tickersInfo[currentTicker];
@@ -1469,11 +1478,10 @@ function registerChangeTickerHandler() {
     for (const button of buttons) {
         button.onclick = () => {
             const ticker = button.innerText;
-            const currentTickerNode = document.getElementById('current-ticker');
-            const currentTicker = currentTickerNode.innerText;
-            if (ticker !== currentTicker) {
-                currentTickerNode.innerText = ticker;
-                sendSwitchAction();
+            if (ticker !== getCurrentTicker()) {
+                setCurrentTicker(ticker);
+                messageQueue = [];
+                sendGotoAction(getCurrentChartTime());
             }
         }
     }
@@ -1575,11 +1583,10 @@ function handleResponse(response) {
     switch (response.action) {
         case 'init':
             tickersInfo = response.data;
-            sendSwitchAction(configs.ticker);
-            return;
+            setCurrentTicker(configs.ticker);
+            sendGotoAction();
             break;
 
-        case 'switch':
         case 'goto':
             removeAllAlerts();
             removeAllOrders();
@@ -1603,13 +1610,7 @@ function handleResponse(response) {
                 });
             }
             commonUpdate();
-
-            if (response.action === 'switch') {
-                document.getElementById('current-ticker').innerText = ticker;
-                updateDatetimepickerRange(ticker);
-                resetChart1TimeScale();
-                messageQueue = [];
-            }
+            resetChart1TimeScale();
 
             showMessage(`Jumped to ${convertTimestampToStringInUTC(getCurrentChartTime())}`);
             break;
@@ -1621,7 +1622,6 @@ function handleResponse(response) {
                 fetchedBars.push(...prefetchedBars);
             }
             isPrefetching = false;
-            return;
             break;
     }
 }
@@ -1689,16 +1689,6 @@ socket.onerror = function (e) {
 
 function sendInitAction() {
     socket.send(JSON.stringify({ action: 'init' }));
-}
-
-function sendSwitchAction(ticker) {
-    ticker = ticker || getCurrentTicker();
-    const timestamp = convertClientTimestampToServerTimestamp(getCurrentChartTime());
-    socket.send(JSON.stringify({
-        action: 'switch',
-        ticker: ticker,
-        timestamp: timestamp,
-    }));
 }
 
 function sendGotoAction(timestamp) {

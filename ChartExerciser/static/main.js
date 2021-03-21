@@ -487,7 +487,6 @@ function updateInfoPanel(param) {
             <div>C: ${prices.close.toFixed(precision)}</div>
             <p style="font-size:0.9em;margin:4px">${smaContent}</p>
             <p style="font-size:0.9em;margin:4px">${distanceContent}</p>
-            <div style="font-size:0.7em">Press D to toggle</div>
         </div>
     `;
 
@@ -1750,11 +1749,6 @@ function registerButtonsHandler() {
         startFastForward();
     });
 
-    $('#createAlertModal').on('shown.bs.modal', function (e) {
-        $('#create-alert-button').one('focus', function (e) {
-            $(this).blur();
-        });
-    });
     const alertPriceInput = $('#alert-price');
     const createAlertConfirmButton = document.getElementById('create-alert-confirm-button');
     alertPriceInput[0].addEventListener('keyup', function (e) {
@@ -1775,7 +1769,10 @@ function registerButtonsHandler() {
         });
         alertPriceInput.val(getLastPrice());
     });
-    $('#createAlertModal').on('shown.bs.modal', function () {
+    $('#createAlertModal').on('shown.bs.modal', function (e) {
+        $('#create-alert-button').on('focus', function (e) {
+            $(this).blur();
+        });
         alertPriceInput.focus();
     });
 
@@ -1792,6 +1789,15 @@ function registerButtonsHandler() {
         $(this).trigger('blur');
         addMarketOrder('sell');
     });
+
+    const infoPanelCheckbox = document.getElementById('info-panel-checkbox');
+    infoPanelCheckbox.addEventListener('click', function (e) {
+        $(this).trigger('blur');
+    });
+    infoPanelCheckbox.addEventListener('change', () => {
+        shouldDisplayInfoPanel = infoPanelCheckbox.checked;
+    });
+    infoPanelCheckbox.checked = shouldDisplayInfoPanel;
 
     document.getElementById('fit-chart1-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
@@ -1857,7 +1863,11 @@ function registerKeyboardEventHandler() {
                 break;
 
             case 'KeyA':
-                addAlert(mouseHoverPriceString);
+                if (event.shiftKey) {
+                    $('#create-alert-button').click();
+                } else {
+                    addAlert(mouseHoverPriceString);
+                }
                 break;
 
             case 'KeyB':
@@ -1878,7 +1888,20 @@ function registerKeyboardEventHandler() {
 
             case 'KeyD':
                 shouldDisplayInfoPanel = !shouldDisplayInfoPanel;
+                document.getElementById('info-panel-checkbox').checked = shouldDisplayInfoPanel;
                 updateInfoPanel();
+                break;
+
+            case 'KeyQ':
+                $('#fit-chart1-button').click();
+                break;
+
+            case 'KeyW':
+                $('#fit-chart2-button').click();
+                break;
+
+            case 'KeyR':
+                $('#reset-scales-button').click();
                 break;
         }
     }, true);

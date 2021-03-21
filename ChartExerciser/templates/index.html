@@ -52,7 +52,7 @@
   <label class="mx-3 text-monospace font-weight-bold h5" style="width: 3ch" id="current-ticker"></label>
   <div class="form-group d-inline-flex">
     <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
-    <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker1" id="datetimepicker-input"/>
+    <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker1" id="datetimepicker-input" maxlength="16" style="width: 20ch"/>
     <div class="input-group-append" data-target="#datetimepicker1" data-toggle="datetimepicker">
       <div class="input-group-text"><i class="fa fa-calendar"></i></div>
       </div>
@@ -62,7 +62,7 @@
   <button type="button" class="btn btn-primary btn-shift mr-0 px-3 py-1.5" id="stepback-button" title="Stepback 1 bar&#013;(Hotkey: Z / ←)"><i class="fa fa-step-backward" aria-hidden="true"></i></button>
   <button type="button" class="btn btn-primary btn-shift mr-0 px-3 py-1.5" id="step-button" title="Step 1 bar&#013;(Hotkey: Space / →)"><i class="fa fa-step-forward" aria-hidden="true"></i></button>
   <button type="button" class="btn btn-primary btn-shift mr-1 py-1.5" id="fast-forward-button" title="Fast forward 24 bars&#013;(Hotkey: F)"><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-primary btn-shift mr-1 py-1.5" id="create-alert-button" data-toggle="modal" data-target="#createAlertModal" title="Create alert"><i class="fa fa-bell" aria-hidden="true"></i></button>
+  <button type="button" class="btn btn-primary btn-shift mr-1 py-1.5" id="create-alert-button" data-toggle="modal" data-target="#createAlertModal" title="Create alert&#013;(Hotkey: Shift+A)"><i class="fa fa-bell" aria-hidden="true"></i></button>
   <button type="button" class="btn btn-success btn-shift text-monospace mr-0 px-3 py-1.5" id="buy-market-button" title="Buy market&#013;(Hotkey: Shift+B)&#013;(💡 Tip: To place a Buy order, hover over the charts and press hotkey &quot;B&quot;.)">B</button>
   <button type="button" class="btn btn-danger btn-shift text-monospace mr-1 px-3 py-1.5" id="sell-market-button" title="Sell market&#013;(Hotkey: Shift+S)&#013;(💡 Tip: To place a Sell order, hover over the charts and press hotkey &quot;S&quot;.)">S</button>
   <label class="mx-1 d-inline-flex mr-auto" id="message"></label>
@@ -77,13 +77,18 @@
     <div class="col" id="chart2"></div>
   </div>
   <div class="row mt-2">
-    <div class="col d-flex justify-content-center">
-      <button type="button" class="btn btn-dark btn-lg" id="fit-chart1-button" title="Fit price scales to H1 chart">Fit to H1</button>
+    <div class="col d-flex justify-content-between">
+      <div class="ml-1">
+        <input type="checkbox" id="info-panel-checkbox" name="info-panel-checkbox">
+        <label for="info-panel-checkbox" title="Display info panel&#013;(Hotkey: D)">Panel</label>
+      </div>
+      <button type="button" class="btn btn-dark btn-lg" id="fit-chart1-button" title="Fit price scales to H1 chart&#013;(Hotkey: Q)">Fit to H1</button>
+      <button type="button" class="btn btn-lg invisible">inv</button>
     </div>
     <div class="col d-flex justify-content-between">
-      <button type="button" class="btn btn-lg invisible">invisible</button>
-      <button type="button" class="btn btn-dark btn-lg" id="fit-chart2-button" title="Fit price scales to M5 chart">Fit to M5</button>
-      <button type="button" class="btn btn-dark btn-lg" id="reset-scales-button" title="Reset time and price scales">Reset Scales</button>
+      <button type="button" class="btn btn-lg invisible">inv padding</button>
+      <button type="button" class="btn btn-dark btn-lg" id="fit-chart2-button" title="Fit price scales to M5 chart&#013;(Hotkey: W)">Fit to M5</button>
+      <button type="button" class="btn btn-dark btn-lg" id="reset-scales-button" title="Reset all time and price scales&#013;(Hotkey: R)">Reset Scales</button>
     </div>
   </div>
   <div class="row my-3">

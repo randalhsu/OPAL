@@ -223,6 +223,23 @@
         <div class="container-fluid">
           <img class="img-responsive center-block" src="{% static 'help_cht.jpg' %}" loading="lazy" width="453" height="710"/>
         </div>
+        <fieldset class="container-fluid mt-4">
+          <legend>Hotkeys</legend>
+          <ul>
+            <li><span class="text-monospace bg-light border rounded px-1">Space</span>/<span class="text-monospace bg-light border rounded px-1">→</span>: Step one bar</li>
+            <li><span class="text-monospace bg-light border rounded px-1">F</span>: Fast forward 24 bars, or until triggers an alert/order</li>
+            <li><span class="text-monospace bg-light border rounded px-1">Z</span>/<span class="text-monospace bg-light border rounded px-1">←</span>: Stepback one bar</li>
+            <li>Hover over the charts:
+              <ul>
+                <li><span class="text-monospace bg-light border rounded px-1">A</span>: Alert
+                <li><span class="text-monospace bg-light border rounded px-1">B</span>: Buy order
+                <li><span class="text-monospace bg-light border rounded px-1">S</span>: Sell order
+                <li><span class="text-monospace bg-light border rounded px-1">D</span>: Display info panel
+                <li><span class="text-monospace bg-light border rounded px-1">G</span>: Go to hovered time
+              </ul>
+            </li>
+          </ul>
+        </fieldset>
       </div>
       <div class="modal-footer">
         <div class="text-center w-100">

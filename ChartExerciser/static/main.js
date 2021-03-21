@@ -373,16 +373,21 @@ function resetChart1TimeScale() {
 let mouseOverChart1 = false;
 let mouseOverChart2 = false;
 let mouseHoverPriceString = null;
+let mouseHoverTimestamp = null;
 
 function registerChartsMouseEventHandler() {
     const chart1El = document.getElementById('chart1').querySelector('.tv-lightweight-charts').querySelectorAll('td')[1];
     chart1El.addEventListener('mouseenter', () => {
         mouseOverChart1 = true;
     });
+    chart1El.addEventListener('mousemove', () => {
+        mouseOverChart1 = true;
+    });
     chart1El.addEventListener('mouseleave', () => {
         mouseOverChart1 = false;
         chart2.clearCrossHair();
         mouseHoverPriceString = null;
+        mouseHoverTimestamp = null;
         updateInfoPanel();
     });
 
@@ -390,10 +395,14 @@ function registerChartsMouseEventHandler() {
     chart2El.addEventListener('mouseenter', () => {
         mouseOverChart2 = true;
     });
+    chart2El.addEventListener('mousemove', () => {
+        mouseOverChart2 = true;
+    });
     chart2El.addEventListener('mouseleave', () => {
         mouseOverChart2 = false;
         chart1.clearCrossHair();
         mouseHoverPriceString = null;
+        mouseHoverTimestamp = null;
         updateInfoPanel();
     });
 }
@@ -408,6 +417,7 @@ function crosshair1SyncHandler(e) {
     const yy = candleSeries2.priceToCoordinate(price);
     chart2.setCrossHairXY(xx, yy, true);
     mouseHoverPriceString = chart1.priceScale('left').formatPrice(price);
+    mouseHoverTimestamp = chart1.timeScale().coordinateToTime(e.point.x);
     updateInfoPanel(e);
 }
 
@@ -421,6 +431,7 @@ function crosshair2SyncHandler(e) {
     const yy = candleSeries1.priceToCoordinate(price);
     chart1.setCrossHairXY(xx, yy, true);
     mouseHoverPriceString = chart2.priceScale('right').formatPrice(price);
+    mouseHoverTimestamp = chart2.timeScale().coordinateToTime(e.point.x);
     updateInfoPanel(e);
 }
 
@@ -1855,6 +1866,12 @@ function registerKeyboardEventHandler() {
 
             case 'KeyF':
                 startFastForward();
+                break;
+
+            case 'KeyG':
+                if (mouseHoverTimestamp !== null) {
+                    sendGotoAction(mouseHoverTimestamp);
+                }
                 break;
 
             case 'ArrowLeft':

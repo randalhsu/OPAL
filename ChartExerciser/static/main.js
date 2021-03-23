@@ -538,6 +538,7 @@ const candleOptions = {
 
 const candleSeries1 = chart1.addCandlestickSeries(candleOptions);
 const candleSeries2 = chart2.addCandlestickSeries(candleOptions);
+const candleSerieses = [candleSeries1, candleSeries2];
 
 function getMinMax(arr) {
     let min = arr[0];
@@ -568,18 +569,28 @@ function resampleToHourlyBars(data) {
     return result;
 }
 
-function getCurrentChartTime() {
-    if (displayBars.length > 0) {
-        return displayBars[displayBars.length - 1].time;
+function getLastDisplayBar(bars = displayBars) {
+    if (bars.length > 0) {
+        return bars[bars.length - 1];
     }
     return null;
 }
 
-function getLastPrice() {
-    if (displayBars.length > 0) {
-        return displayBars[displayBars.length - 1].close;
+function getSecondLastDisplayBar(bars = displayBars) {
+    if (bars.length > 1) {
+        return bars[bars.length - 2];
     }
-    return NaN;
+    return null;
+}
+
+function getCurrentChartTime() {
+    const bar = getLastDisplayBar();
+    return bar === null ? null : bar.time;
+}
+
+function getLastPrice() {
+    const bar = getLastDisplayBar();
+    return bar === null ? NaN : bar.close;
 }
 
 function getCurrentTicker() {
@@ -657,14 +668,13 @@ async function resetAllScales() {
 
 function drawDailyOpenPrice() {
     const localeHourDiff = new Date().getTimezoneOffset() / 60;
-    const lastBar = displayBars[displayBars.length - 1];
-    const userDailyOpenHour = (DATA_DAILY_OPEN_HOUR + getUTCOffsetHours() + getDSTOffsetHours(lastBar.time) + 24) % 24;
+    const userDailyOpenHour = (DATA_DAILY_OPEN_HOUR + getUTCOffsetHours() + getDSTOffsetHours(getCurrentChartTime()) + 24) % 24;
 
     for (let i = displayBars.length - 1; i >= 0; --i) {
         const date = new Date(displayBars[i].time * 1000);
         if ((date.getHours() + localeHourDiff + 24) % 24 === userDailyOpenHour && date.getMinutes() === 0) {
             const dailyOpenPrice = displayBars[i].open;
-            for (const series of [candleSeries1, candleSeries2]) {
+            for (const series of candleSerieses) {
                 attachDailyOpenPriceLineToSeries(series, dailyOpenPrice);
             }
             return;
@@ -1592,7 +1602,6 @@ function handleResponse(response) {
             removeAllOrders();
             removeAllPositions();
 
-            const ticker = response.ticker;
             fetchedBars = response.data;
             adjustBarsTime(fetchedBars);
 
@@ -1604,9 +1613,9 @@ function handleResponse(response) {
             ++endIndex;
             displayBars = fetchedBars.slice(0, endIndex + 1);
 
-            for (const series of [candleSeries1, candleSeries2]) {
+            for (const series of candleSerieses) {
                 series.applyOptions({
-                    priceFormat: tickersInfo[ticker],
+                    priceFormat: tickersInfo[response.ticker],
                 });
             }
             commonUpdate();
@@ -1695,7 +1704,7 @@ function sendGotoAction(timestamp) {
     socket.send(JSON.stringify({
         action: 'goto',
         ticker: getCurrentTicker(),
-        timestamp: convertClientTimestampToServerTimestamp(timestamp),
+        timestamp: timestamp === undefined ? 0 : convertClientTimestampToServerTimestamp(timestamp),
     }));
 }
 

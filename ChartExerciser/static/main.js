@@ -8,6 +8,7 @@ const DATA_DAILY_OPEN_HOUR = 18;
 const DEFAULT_CONFIGS = {
     UTCOffsetHour: '8',
     ticker: 'MES',
+    muteSound: false,
     bgColor: '000000',
     axesTextColor: 'FFFFFF',
     dailyOpenPriceColor: 'CFA600',
@@ -92,6 +93,13 @@ function getHexColor(s) {
     UTCTimeOffsetSelect.value = configs.UTCOffsetHour;
     UTCTimeOffsetSelect.addEventListener('change', (event) => {
         configs.UTCOffsetHour = event.target.value;
+        updateNewURLDisplay();
+    });
+
+    const muteSoundCheckbox = document.getElementById('mute-sound-checkbox');
+    muteSoundCheckbox.checked = configs.muteSound;
+    muteSoundCheckbox.addEventListener('change', (event) => {
+        configs.muteSound = event.target.checked;
         updateNewURLDisplay();
     });
 
@@ -921,6 +929,9 @@ function checkIfAlertTriggered() {
 let audioCtx = null;
 
 function beep(frequency = 718, type = 'triangle', volume = 0.1, duration = 250) {
+    if (configs.muteSound) {
+        return;
+    }
     if (audioCtx === null) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }

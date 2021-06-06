@@ -485,7 +485,7 @@ function updateInfoPanel(param) {
     const price = +mouseHoverPriceString;
     const tickerInfo = getTickerInfo();
     let distanceTicks = Math.floor((getLastPrice() - price) / tickerInfo.minMove);
-    const arrow = distanceTicks > 0 ? '🡶' : distanceTicks < 0 ? '🡵' : '🡲';
+    const arrow = distanceTicks > 0 ? '➘' : distanceTicks < 0 ? '➚' : '➙';
     distanceTicks = Math.abs(distanceTicks);
     const distanceDollars = convertDollarsToString(distanceTicks * tickerInfo.tickValue);
     const distanceContent = `${arrow} ${distanceTicks} ticks<br/>${arrow} $${distanceDollars}`;
@@ -834,7 +834,7 @@ function addAlert(priceString) {
     alerts.push(alert);
 
     updateAlertsTable();
-    showMessage(`🕭 @ ${priceString}`);
+    showMessage(`<i class="fa fa-bell" aria-hidden="true"></i> @ ${priceString}`);
 }
 
 function removeAlert(alert) {
@@ -906,7 +906,7 @@ function checkIfAlertTriggered() {
         for (const alert of alerts) {
             const price = +alert.priceString;
             if (low <= price && price <= high) {
-                showMessage(`🕭 @ ${alert.priceString} triggered!`);
+                showMessage(`<i class="fa fa-bell" aria-hidden="true"></i> @ ${alert.priceString} triggered!`);
                 removeAlert(alert);
                 hasTriggeredAlert = true;
             }
@@ -1146,7 +1146,7 @@ function updateOrdersTable() {
             }
             const orderPrice = +order.priceString;
             let distanceTicks = Math.floor((lastPrice - orderPrice) / tickerInfo.minMove);
-            const arrow = distanceTicks > 0 ? '🡶' : distanceTicks < 0 ? '🡵' : '🡲';
+            const arrow = distanceTicks > 0 ? '➘' : distanceTicks < 0 ? '➚' : '➙';
             distanceTicks = Math.abs(distanceTicks);
             const distanceDollars = convertDollarsToString(distanceTicks * tickerInfo.tickValue);
 
@@ -1263,11 +1263,11 @@ class Position {
         const openedPrice = convertPriceToString(this.openedPrice);
         let closedPrice = '';
         if (this.closedPrice !== null) {
-            let arrow = '🡲';
+            let arrow = '➙';
             if (this.openedPrice < this.closedPrice) {
-                arrow = '🡵';
+                arrow = '➚';
             } else if (this.openedPrice > this.closedPrice) {
-                arrow = '🡶';
+                arrow = '➘';
             }
             closedPrice = ` ${arrow} ${convertPriceToString(this.closedPrice)}`;
         }
@@ -1441,6 +1441,7 @@ let messageQueue = [];
 let isShowingMessage = false;
 
 function showMessage(message, timeout = 2000) {
+    message = `<div style="vertical-align:middle">${message}</div>`;
     messageQueue.push([message, timeout]);
     consumeMessageQueue();
 }

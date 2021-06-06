@@ -45,17 +45,30 @@ function getHexColor(s) {
     return (isHexColor(s) ? '#' + s : '#000000');
 }
 
+function getNonDefaultConfigsParams() {
+    const params = new URLSearchParams();
+    for (const [key, defaultValue] of Object.entries(DEFAULT_CONFIGS)) {
+        if (configs[key] !== defaultValue) {
+            params.append(key, configs[key]);
+        }
+    }
+    return params;
+}
+
+function updateLinkToCurrentTickerAndTimestamp() {
+    const params = getNonDefaultConfigsParams();
+    params.set('ticker', getCurrentTicker());
+    params.set('timestamp', getCurrentChartTime());
+
+    const url = new URL(document.location.href);
+    const newURL = `${url.origin}${url.pathname}?${params.toString()}`;
+    document.getElementById('freeze-status-link').setAttribute('href', newURL);
+}
+
 (function prepareOptionsModal() {
 
     function updateNewURLDisplay() {
-        const params = new URLSearchParams();
-        for (const [key, defaultValue] of Object.entries(DEFAULT_CONFIGS)) {
-            if (configs[key] !== defaultValue) {
-                params.append(key, configs[key]);
-            }
-        }
-
-        const paramsString = params.toString();
+        const paramsString = getNonDefaultConfigsParams().toString();
         let html = '';
         if (paramsString) {
             const url = new URL(document.location.href);
@@ -1606,7 +1619,8 @@ function handleResponse(response) {
         case 'init':
             tickersInfo = response.data;
             setCurrentTicker(configs.ticker);
-            sendGotoAction();
+            const paramTimestamp = (new URL(window.location.href)).searchParams.get('timestamp');
+            sendGotoAction(paramTimestamp);
             break;
 
         case 'goto':
@@ -1660,6 +1674,7 @@ function commonUpdate() {
     updateDatetimepickerCurrentDatetime(getCurrentChartTime());
     updateOrdersTable();
     updatePositionsTable();
+    updateLinkToCurrentTickerAndTimestamp();
 }
 
 function step() {
@@ -1716,7 +1731,7 @@ function sendGotoAction(timestamp) {
     socket.send(JSON.stringify({
         action: 'goto',
         ticker: getCurrentTicker(),
-        timestamp: timestamp === undefined ? 0 : convertClientTimestampToServerTimestamp(timestamp),
+        timestamp: (timestamp == null) ? 0 : convertClientTimestampToServerTimestamp(timestamp),
     }));
 }
 
@@ -1838,6 +1853,10 @@ function registerButtonsHandler() {
         resetAllScales();
     });
 
+    document.getElementById('freeze-status-link-button').addEventListener('click', function (e) {
+        $(this).trigger('blur');
+    });
+
     $('#optionsModal').on('shown.bs.modal', function (e) {
         $('#options-button').one('focus', function (e) {
             $(this).blur();
@@ -1845,6 +1864,9 @@ function registerButtonsHandler() {
     });
     document.getElementById('options-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
+    });
+    $('#optionsModal').on('hidden.bs.modal', function (e) {
+        updateLinkToCurrentTickerAndTimestamp();
     });
 
     $('#helpModal').on('shown.bs.modal', function (e) {

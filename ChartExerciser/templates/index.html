@@ -63,11 +63,11 @@
   <button type="button" class="btn btn-primary btn-shift mr-0 px-3 py-1.5" id="step-button" title="Step 1 bar&#013;(Hotkey: Space / →)"><i class="fa fa-step-forward" aria-hidden="true"></i></button>
   <button type="button" class="btn btn-primary btn-shift mr-1 py-1.5" id="fast-forward-button" title="Fast forward 24 bars&#013;(Hotkey: F)"><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
   <button type="button" class="btn btn-primary btn-shift mr-1 py-1.5" id="create-alert-button" data-toggle="modal" data-target="#createAlertModal" title="Create alert&#013;(Hotkey: Shift+A)"><i class="fa fa-bell" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-success btn-shift text-monospace mr-0 px-3 py-1.5" id="buy-market-button" title="Buy market&#013;(Hotkey: Shift+B)&#013;(💡 Tip: To place a Buy order, hover over the charts and press hotkey &quot;B&quot;.)">B</button>
-  <button type="button" class="btn btn-danger btn-shift text-monospace mr-1 px-3 py-1.5" id="sell-market-button" title="Sell market&#013;(Hotkey: Shift+S)&#013;(💡 Tip: To place a Sell order, hover over the charts and press hotkey &quot;S&quot;.)">S</button>
+  <button type="button" class="btn btn-success btn-shift text-monospace mr-0 px-3 py-1.5" id="buy-market-button" title="Buy market&#013;(Hotkey: Shift+B)&#013;&#013;(💡 Tip: To place a Buy order, hover over the charts and press hotkey &quot;B&quot;.)">B</button>
+  <button type="button" class="btn btn-danger btn-shift text-monospace mr-1 px-3 py-1.5" id="sell-market-button" title="Sell market&#013;(Hotkey: Shift+S)&#013;&#013;(💡 Tip: To place a Sell order, hover over the charts and press hotkey &quot;S&quot;.)">S</button>
   <label class="mx-1 d-inline-flex mr-auto" id="message"></label>
   <div class="float-right">
-    <a href="" target="_blank" id="freeze-status-link"><button type="button" class="btn btn-secondary" id="freeze-status-link-button" title="Open link to current ticker and timestamp"><i class="fa fa-link" aria-hidden="true"></i></button></a>
+    <a href="" target="_blank" id="freeze-status-link"><button type="button" class="btn btn-secondary" id="freeze-status-link-button" title="Open link to current ticker and timestamp snapshot"><i class="fa fa-link" aria-hidden="true"></i></button></a>
     <button type="button" class="btn btn-secondary ml-1" id="options-button" title="Options" data-toggle="modal" data-target="#optionsModal"><i class="fa fa-cog" aria-hidden="true"></i></button>
     <button type="button" class="btn btn-info ml-1" id="help-button" title="Help" data-toggle="modal" data-target="#helpModal"><i class="fa fa-question-circle-o" aria-hidden="true"></i></button>
   </div>
@@ -88,7 +88,7 @@
     </div>
     <div class="col d-flex justify-content-between">
       <button type="button" class="btn btn-lg invisible">inv padding</button>
-      <button type="button" class="btn btn-dark btn-lg" id="fit-chart2-button" title="Fit price scales to M5 chart&#013;(Hotkey: W)">Fit to M5</button>
+      <button type="button" class="btn btn-dark btn-lg" id="fit-chart2-button" title="Fit price scales to M5 chart&#013;(Hotkey: W / E)">Fit to M5</button>
       <button type="button" class="btn btn-dark btn-lg" id="reset-scales-button" title="Reset all time and price scales&#013;(Hotkey: R)">Reset Scales</button>
     </div>
   </div>
@@ -238,11 +238,18 @@
             <li><span class="text-monospace bg-light border rounded px-1">Z</span>/<span class="text-monospace bg-light border rounded px-1">←</span>: Stepback one bar</li>
             <li>Hover over the charts:
               <ul>
-                <li><span class="text-monospace bg-light border rounded px-1">A</span>: Alert
-                <li><span class="text-monospace bg-light border rounded px-1">B</span>: Buy order
-                <li><span class="text-monospace bg-light border rounded px-1">S</span>: Sell order
-                <li><span class="text-monospace bg-light border rounded px-1">D</span>: Display info panel
-                <li><span class="text-monospace bg-light border rounded px-1">G</span>: Go to hovered time
+                <li><span class="text-monospace bg-light border rounded px-1">A</span>: Alert</li>
+                <li><span class="text-monospace bg-light border rounded px-1">B</span>: Buy order</li>
+                <li><span class="text-monospace bg-light border rounded px-1">S</span>: Sell order</li>
+                <li><span class="text-monospace bg-light border rounded px-1">D</span>: Display info panel</li>
+                <li><span class="text-monospace bg-light border rounded px-1">G</span>: Go to hovered time</li>
+              </ul>
+            </li>
+            <li>Scales:
+              <ul>
+                <li><span class="text-monospace bg-light border rounded px-1">Q</span>: Fit to left chart</li>
+                <li><span class="text-monospace bg-light border rounded px-1">W</span>/<span class="text-monospace bg-light border rounded px-1">E</span>: Fit to right chart</li>
+                <li><span class="text-monospace bg-light border rounded px-1">R</span>: Reset all scales</li>
               </ul>
             </li>
           </ul>

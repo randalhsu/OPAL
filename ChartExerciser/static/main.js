@@ -1947,6 +1947,7 @@ function registerKeyboardEventHandler() {
                 break;
 
             case 'KeyW':
+            case 'KeyE':
                 $('#fit-chart2-button').click();
                 break;
 

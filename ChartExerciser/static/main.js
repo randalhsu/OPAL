@@ -803,8 +803,17 @@ function customPriceLineDraggedHandler(params) {
     }
 }
 
+let lastPointerPosition = { x: null, y: null };
+
+(function () {
+    document.onpointermove = (e) => {
+        lastPointerPosition = { x: e.clientX, y: e.clientY };
+    };
+})();
+
 function syncDraggablePriceLines(collections, draggedPriceLine, fromPriceString) {
-    const series = (draggedPriceLine.series() === candleSeries1.series() ? candleSeries1 : candleSeries2);
+    const chart1RectRight = document.getElementById('chart1').getBoundingClientRect().right;
+    const series = (lastPointerPosition.x < chart1RectRight ? candleSeries1 : candleSeries2);
     const newPrice = draggedPriceLine.options().price;
     const type = getPriceLineType(draggedPriceLine);
 

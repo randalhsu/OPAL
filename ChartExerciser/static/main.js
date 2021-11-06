@@ -391,45 +391,56 @@ function resetChart1TimeScale() {
     chart1.timeScale().setVisibleLogicalRange(range);
 }
 
-let mouseOverChart1 = false;
-let mouseOverChart2 = false;
-let mouseHoverPriceString = null;
-let mouseHoverTimestamp = null;
+let pointerOverChart1 = false;
+let pointerOverChart2 = false;
+let pointerHoverPriceString = null;
+let pointerHoverTimestamp = null;
 
-function registerChartsMouseEventHandler() {
+function registerChartsPointerEventHandler() {
     const chart1El = document.getElementById('chart1').querySelector('.tv-lightweight-charts').querySelectorAll('td')[1];
-    chart1El.addEventListener('mouseenter', () => {
-        mouseOverChart1 = true;
+    chart1El.addEventListener('pointerenter', () => {
+        pointerOverChart1 = true;
+        pointerOverChart2 = false;
     });
-    chart1El.addEventListener('mousemove', () => {
-        mouseOverChart1 = true;
+
+    chart1El.addEventListener('pointermove', () => {
+        pointerOverChart1 = true;
+        pointerOverChart2 = false;
     });
+
     chart1El.addEventListener('mouseleave', () => {
-        mouseOverChart1 = false;
+        pointerOverChart1 = false;
         chart2.clearCrossHair();
-        mouseHoverPriceString = null;
-        mouseHoverTimestamp = null;
+        pointerHoverPriceString = null;
+        pointerHoverTimestamp = null;
         updateInfoPanel();
     });
 
     const chart2El = document.getElementById('chart2').querySelector('.tv-lightweight-charts').querySelectorAll('td')[1];
-    chart2El.addEventListener('mouseenter', () => {
-        mouseOverChart2 = true;
+    chart2El.addEventListener('pointerenter', () => {
+        pointerOverChart1 = false;
+        pointerOverChart2 = true;
     });
-    chart2El.addEventListener('mousemove', () => {
-        mouseOverChart2 = true;
+    chart2El.addEventListener('pointermove', () => {
+        pointerOverChart1 = false;
+        pointerOverChart2 = true;
     });
     chart2El.addEventListener('mouseleave', () => {
-        mouseOverChart2 = false;
+        pointerOverChart2 = false;
         chart1.clearCrossHair();
-        mouseHoverPriceString = null;
-        mouseHoverTimestamp = null;
+        pointerHoverPriceString = null;
+        pointerHoverTimestamp = null;
         updateInfoPanel();
     });
 }
 
 function crosshair1SyncHandler(e) {
-    if (!mouseOverChart1 || e.point === undefined) {
+    if (!pointerOverChart1 || e.point === undefined) {
+        if (pointerOverChart1) {
+            chart2.clearCrossHair();
+        }
+        pointerHoverPriceString = null;
+        pointerHoverTimestamp = null;
         return;
     }
 
@@ -437,13 +448,18 @@ function crosshair1SyncHandler(e) {
     const price = candleSeries1.coordinateToPrice(e.point.y);
     const yy = candleSeries2.priceToCoordinate(price);
     chart2.setCrossHairXY(xx, yy, true);
-    mouseHoverPriceString = chart1.priceScale('left').formatPrice(price);
-    mouseHoverTimestamp = chart1.timeScale().coordinateToTime(e.point.x);
+    pointerHoverPriceString = chart1.priceScale('left').formatPrice(price);
+    pointerHoverTimestamp = chart1.timeScale().coordinateToTime(e.point.x);
     updateInfoPanel(e);
 }
 
 function crosshair2SyncHandler(e) {
-    if (!mouseOverChart2 || e.point === undefined) {
+    if (!pointerOverChart2 || e.point === undefined) {
+        if (pointerOverChart2) {
+            chart1.clearCrossHair();
+        }
+        pointerHoverPriceString = null;
+        pointerHoverTimestamp = null;
         return;
     }
 
@@ -451,8 +467,8 @@ function crosshair2SyncHandler(e) {
     const price = candleSeries2.coordinateToPrice(e.point.y);
     const yy = candleSeries1.priceToCoordinate(price);
     chart1.setCrossHairXY(xx, yy, true);
-    mouseHoverPriceString = chart2.priceScale('right').formatPrice(price);
-    mouseHoverTimestamp = chart2.timeScale().coordinateToTime(e.point.x);
+    pointerHoverPriceString = chart2.priceScale('right').formatPrice(price);
+    pointerHoverTimestamp = chart2.timeScale().coordinateToTime(e.point.x);
     updateInfoPanel(e);
 }
 
@@ -461,7 +477,7 @@ let shouldDisplayInfoPanel = false;
 function updateInfoPanel(param) {
     const panel = document.getElementById('info-panel');
     if (!shouldDisplayInfoPanel || getCurrentTicker() === '' ||
-        !(mouseOverChart1 || mouseOverChart2)) {
+        !(pointerOverChart1 || pointerOverChart2)) {
         panel.style.display = 'none';
         return;
     }
@@ -470,7 +486,7 @@ function updateInfoPanel(param) {
         return;
     }
 
-    const chart = mouseOverChart1 ? chart1 : chart2;
+    const chart = pointerOverChart1 ? chart1 : chart2;
     const width = chart.options().width;
     const height = chart.options().height;
     if (!param.time ||
@@ -480,15 +496,15 @@ function updateInfoPanel(param) {
         return;
     }
 
-    const prices = param.seriesPrices.get(mouseOverChart1 ? candleSeries1 : candleSeries2);
+    const prices = param.seriesPrices.get(pointerOverChart1 ? candleSeries1 : candleSeries2);
     if (prices === undefined) {
         return;
     }
     const precision = getTickerInfo().precision;
     let smaContent = '';
     for (const sma of ['sma11', 'sma21', 'sma22', 'sma23']) {
-        if ((mouseOverChart1 && sma[3] === '2') ||
-            (mouseOverChart2 && sma[3] === '1')) {
+        if ((pointerOverChart1 && sma[3] === '2') ||
+            (pointerOverChart2 && sma[3] === '1')) {
             continue;
         }
         const chart = sma[3] === '1' ? chart1 : chart2;
@@ -503,7 +519,7 @@ function updateInfoPanel(param) {
         smaContent += `SMA(${period}): ${smaPrice.toFixed(precision)}<br/>`;
     }
 
-    const price = +mouseHoverPriceString;
+    const price = +pointerHoverPriceString;
     const tickerInfo = getTickerInfo();
     let distanceTicks = Math.floor((getLastPrice() - price) / tickerInfo.minMove);
     const arrow = distanceTicks > 0 ? '➘' : distanceTicks < 0 ? '➚' : '➙';
@@ -522,7 +538,7 @@ function updateInfoPanel(param) {
         </div>
     `;
 
-    const chartEl = document.getElementById(mouseOverChart1 ? 'chart1' : 'chart2');
+    const chartEl = document.getElementById(pointerOverChart1 ? 'chart1' : 'chart2');
     const chartRect = chartEl.querySelector('.tv-lightweight-charts').getBoundingClientRect();
     const leftPriceScaleWidth = chartEl.querySelector('td').getBoundingClientRect().width;
     const timeScaleHeight = chartEl.querySelectorAll('tr')[1].getBoundingClientRect().height;
@@ -1552,7 +1568,7 @@ function initialize() {
     initDatetimepicker();
     registerChangeTickerHandler();
     registerButtonsHandler();
-    registerChartsMouseEventHandler();
+    registerChartsPointerEventHandler();
     registerKeyboardEventHandler();
     registerChartResizersHandler();
     updateAlertsTable();
@@ -1902,8 +1918,8 @@ function registerKeyboardEventHandler() {
                 break;
 
             case 'KeyG':
-                if (mouseHoverTimestamp !== null) {
-                    sendGotoAction(mouseHoverTimestamp);
+                if (pointerHoverTimestamp !== null) {
+                    sendGotoAction(pointerHoverTimestamp);
                 }
                 break;
 
@@ -1916,7 +1932,7 @@ function registerKeyboardEventHandler() {
                 if (event.shiftKey) {
                     $('#create-alert-button').click();
                 } else {
-                    addAlert(mouseHoverPriceString);
+                    addAlert(pointerHoverPriceString);
                 }
                 break;
 
@@ -1924,7 +1940,7 @@ function registerKeyboardEventHandler() {
                 if (event.shiftKey) {
                     addMarketOrder('buy');
                 } else {
-                    addOrder('buy', mouseHoverPriceString);
+                    addOrder('buy', pointerHoverPriceString);
                 }
                 break;
 
@@ -1932,7 +1948,7 @@ function registerKeyboardEventHandler() {
                 if (event.shiftKey) {
                     addMarketOrder('sell');
                 } else {
-                    addOrder('sell', mouseHoverPriceString);
+                    addOrder('sell', pointerHoverPriceString);
                 }
                 break;
 

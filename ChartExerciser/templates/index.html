@@ -32,7 +32,7 @@
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone-with-data.min.js" integrity="sha512-rjmacQUGnwQ4OAAt3MoAmWDQIuswESNZwYcKC8nmdCIxAVkRC/Lk2ta2CWGgCZyS+FfBWPgaO01LvgwU/BX50Q==" crossorigin="anonymous"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/js/tempusdominus-bootstrap-4.min.js" integrity="sha512-k6/Bkb8Fxf/c1Tkyl39yJwcOZ1P4cRrJu77p83zJjN2Z55prbFHxPs9vN7q3l3+tSMGPDdoH51AEU8Vgo1cgAA==" crossorigin="anonymous"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.8.1/spectrum.min.js" integrity="sha512-1aNp9qKP+hKU/VJwCtYqJP9tdZWbMDN5pEEXXoXT0pTAxZq1HHZhNBR/dtTNSrHO4U1FsFGGILbqG1O9nl8Mdg==" crossorigin="anonymous"></script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.3/pako_inflate.min.js" integrity="sha512-PNGOE4EKAk0dmhDBFDVP2hDiZ3awyRMrvvQzpBgqVcB3KkFFHFjgWO3af8CVLIEy5dliIV3+/iXla4Lp0gZ/bw==" crossorigin="anonymous"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako_inflate.min.js" integrity="sha512-fgc3x4jhafjzc+RLRBO+llDWTvHZdOmpQU3qU7iZ5Qm0nZ9KWPGytu3j06tcm4ZZ2jf6fCz/oSK7KrILK5K+AA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script defer src="{% static 'lightweight-charts.standalone.production.js' %}"></script>
     <script defer src="{% static 'main.js' %}"></script>
     <title>Practice Your Price Action Skill</title>
@@ -63,8 +63,8 @@
   <button type="button" class="btn btn-primary btn-shift mr-0 px-3 py-1.5" id="step-button" title="Step 1 bar&#013;(Hotkey: Space / →)"><i class="fa fa-step-forward" aria-hidden="true"></i></button>
   <button type="button" class="btn btn-primary btn-shift mr-1 py-1.5" id="fast-forward-button" title="Fast forward 24 bars&#013;(Hotkey: F)"><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
   <button type="button" class="btn btn-primary btn-shift mr-1 py-1.5" id="create-alert-button" data-toggle="modal" data-target="#createAlertModal" title="Create alert&#013;(Hotkey: Shift+A)"><i class="fa fa-bell" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-success btn-shift text-monospace mr-0 px-3 py-1.5" id="buy-market-button" title="Buy market&#013;(Hotkey: Shift+B)&#013;&#013;(💡 Tip: To place a Buy order, hover over the charts and press hotkey &quot;B&quot;.)">B</button>
-  <button type="button" class="btn btn-danger btn-shift text-monospace mr-1 px-3 py-1.5" id="sell-market-button" title="Sell market&#013;(Hotkey: Shift+S)&#013;&#013;(💡 Tip: To place a Sell order, hover over the charts and press hotkey &quot;S&quot;.)">S</button>
+  <button type="button" class="btn btn-success btn-shift text-monospace mr-0 px-3 py-1.5" id="buy-button" title="Buy market&#013;(Hotkey: Shift+B)&#013;&#013;(💡 Tip: To place a Buy order, hover over the charts and press hotkey &quot;B&quot;.)">B</button>
+  <button type="button" class="btn btn-danger btn-shift text-monospace mr-1 px-3 py-1.5" id="sell-button" title="Sell market&#013;(Hotkey: Shift+S)&#013;&#013;(💡 Tip: To place a Sell order, hover over the charts and press hotkey &quot;S&quot;.)">S</button>
   <label class="mx-1 d-inline-flex mr-auto" id="message"></label>
   <div class="float-right">
     <a href="" target="_blank" id="freeze-status-link"><button type="button" class="btn btn-secondary" id="freeze-status-link-button" title="Open link to current ticker and timestamp snapshot"><i class="fa fa-link" aria-hidden="true"></i></button></a>
@@ -73,9 +73,9 @@
   </div>
 </div>
 <div class="container-fluid">
-  <div class="row d-inline-flex flex-nowrap">
-    <div class="col" id="chart1"></div>
-    <div class="col" id="chart2"></div>
+  <div class="d-flex flex-row flex-nowrap justify-content-between">
+    <div id="chart1"></div>
+    <div id="chart2"></div>
   </div>
   <div class="row mt-2">
     <div class="col d-flex justify-content-between">
@@ -83,12 +83,12 @@
         <input type="checkbox" id="info-panel-checkbox" name="info-panel-checkbox">
         <label for="info-panel-checkbox" title="Display info panel&#013;(Hotkey: D)">Panel</label>
       </div>
-      <button type="button" class="btn btn-dark btn-lg" id="fit-chart1-button" title="Fit price scales to H1 chart&#013;(Hotkey: Q)">Fit to H1</button>
+      <button type="button" class="btn btn-dark btn-lg" id="fit-chart1-button" title="Fit price scales to H1 chart&#013;(Hotkey: Q)">Fit H1</button>
       <button type="button" class="btn btn-lg invisible">inv</button>
     </div>
     <div class="col d-flex justify-content-between">
       <button type="button" class="btn btn-lg invisible">inv padding</button>
-      <button type="button" class="btn btn-dark btn-lg" id="fit-chart2-button" title="Fit price scales to M5 chart&#013;(Hotkey: W / E)">Fit to M5</button>
+      <button type="button" class="btn btn-dark btn-lg" id="fit-chart2-button" title="Fit price scales to M5 chart&#013;(Hotkey: W / E)">Fit M5</button>
       <button type="button" class="btn btn-dark btn-lg" id="reset-scales-button" title="Reset all time and price scales&#013;(Hotkey: R)">Reset Scales</button>
     </div>
   </div>

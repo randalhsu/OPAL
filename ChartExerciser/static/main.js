@@ -1823,13 +1823,18 @@ function registerButtonsHandler() {
     });
     document.getElementById('create-alert-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
-        const tickerInfo = getTickerInfo();
-        alertPriceInput.attr('step', tickerInfo.minMove);
-        alertPriceInput.change(function () {
-            $(this).val(parseFloat($(this).val()).toFixed(tickerInfo.precision));
-            createAlertConfirmButton.disabled = !alertPriceInput[0].checkValidity();
-        });
-        alertPriceInput.val(getLastPrice());
+        if (pointerHoverPriceString === null) {
+            const tickerInfo = getTickerInfo();
+            alertPriceInput.attr('step', tickerInfo.minMove);
+            alertPriceInput.change(function () {
+                $(this).val(parseFloat($(this).val()).toFixed(tickerInfo.precision));
+                createAlertConfirmButton.disabled = !alertPriceInput[0].checkValidity();
+            });
+            alertPriceInput.val(getLastPrice());
+            $('#createAlertModal').modal();
+        } else {
+            addAlert(pointerHoverPriceString);
+        }
     });
     $('#createAlertModal').on('shown.bs.modal', function (e) {
         $('#create-alert-button').on('focus', function (e) {
@@ -1843,13 +1848,21 @@ function registerButtonsHandler() {
         addAlert(alertPriceInput.val().toString());
     });
 
-    document.getElementById('buy-market-button').addEventListener('click', function (e) {
+    document.getElementById('buy-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
-        addMarketOrder('buy');
+        if (pointerHoverPriceString === null) {
+            addMarketOrder('buy');
+        } else {
+            addOrder('buy', pointerHoverPriceString);
+        }
     });
-    document.getElementById('sell-market-button').addEventListener('click', function (e) {
+    document.getElementById('sell-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
-        addMarketOrder('sell');
+        if (pointerHoverPriceString === null) {
+            addMarketOrder('sell');
+        } else {
+            addOrder('sell', pointerHoverPriceString);
+        }
     });
 
     const infoPanelCheckbox = document.getElementById('info-panel-checkbox');

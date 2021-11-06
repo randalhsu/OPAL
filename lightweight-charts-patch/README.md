@@ -2,7 +2,7 @@
 
 Custom patches that enhance [lightweight-charts](https://github.com/tradingview/lightweight-charts/blob/master/BUILDING.md).
 
-Can be `git am *.patch` on lightweight-charts v3.3.0.
+Can be `git am *.patch` against lightweight-charts v3.6.1.
 
 ## Steps
 

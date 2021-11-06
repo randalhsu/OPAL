@@ -1,0 +1,33 @@
+From 5616bdaa4ebb9894a60f47e728adc0fa0bc0e0a3 Mon Sep 17 00:00:00 2001
+From: randalhsu <xxx@gmail.com>
+Date: Sat, 6 Nov 2021 11:13:05 +0800
+Subject: [PATCH 4/4] setCrossHair for mobile
+
+---
+ src/gui/pane-widget.ts | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/src/gui/pane-widget.ts b/src/gui/pane-widget.ts
+index 42a84a2..0717bbb 100644
+--- a/src/gui/pane-widget.ts
++++ b/src/gui/pane-widget.ts
+@@ -598,14 +598,10 @@ export class PaneWidget implements IDestroyable {
+ 			const x = xx as Coordinate;
+ 			const y = yy as Coordinate;
+ 
+-			if (!mobileTouch) {
+-				this._setCrosshairPositionNoFire(x, y);
+-			}
++			this._setCrosshairPositionNoFire(x, y);
+ 		} else {
+ 			this._state.model().setHoveredSource(null);
+-			if (!isMobile) {
+-				this._clearCrosshairPosition();
+-			}
++			this._clearCrosshairPosition();
+ 		}
+ 	}
+ 
+-- 
+2.30.1 (Apple Git-130)
+

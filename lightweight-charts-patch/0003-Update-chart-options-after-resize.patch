@@ -1,14 +1,14 @@
-From d895c2f95f10ea7f15573279da96def62c2cff90 Mon Sep 17 00:00:00 2001
-From: Randal <xxx@gmail.com>
+From 9c6949fe898ae27d54276e097dd26870bda60459 Mon Sep 17 00:00:00 2001
+From: randalhsu <xxx@gmail.com>
 Date: Sat, 20 Feb 2021 16:55:51 +0800
-Subject: [PATCH 3/3] Update chart options after resize
+Subject: [PATCH 3/4] Update chart options after resize
 
 ---
  src/gui/chart-widget.ts | 3 +++
  1 file changed, 3 insertions(+)
 
 diff --git a/src/gui/chart-widget.ts b/src/gui/chart-widget.ts
-index 66207d5..7a57ffb 100644
+index 1f10592..c574987 100644
 --- a/src/gui/chart-widget.ts
 +++ b/src/gui/chart-widget.ts
 @@ -189,6 +189,9 @@ export class ChartWidget implements IDestroyable {
@@ -22,5 +22,5 @@ index 66207d5..7a57ffb 100644
  
  	public paint(invalidateMask?: InvalidateMask): void {
 -- 
-2.29.0.windows.1
+2.30.1 (Apple Git-130)
 

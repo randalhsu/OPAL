@@ -1,26 +1,24 @@
-From d4b5c079e7063a4561bbb9504eed0e5d98a1cc47 Mon Sep 17 00:00:00 2001
+From b001a84e30da7a11a16420712ed3c6ab5f45b1a3 Mon Sep 17 00:00:00 2001
 From: randalhsu <xxx@gmail.com>
 Date: Wed, 3 Mar 2021 15:23:32 +0800
-Subject: [PATCH 2/3] Draggable custom price line
+Subject: [PATCH 2/4] Draggable custom price line
 
 ---
  src/api/chart-api.ts                          |  30 +++-
  src/api/ichart-api.ts                         |  22 +++
  src/api/iprice-scale-api.ts                   |   2 +
- src/api/iseries-api.ts                        |   3 +
  .../options/price-line-options-defaults.ts    |   1 +
  src/api/price-scale-api.ts                    |   4 +
  src/gui/chart-widget.ts                       |  26 ++++
  src/gui/price-axis-widget.ts                  | 135 ++++++++++++++++--
  src/model/chart-model.ts                      |  10 ++
- src/model/custom-price-line.ts                |   4 +
  src/model/price-line-options.ts               |   1 +
  src/model/series.ts                           |   4 +
  src/renderers/walk-line.ts                    |   7 +-
- 13 files changed, 232 insertions(+), 17 deletions(-)
+ 11 files changed, 225 insertions(+), 17 deletions(-)
 
 diff --git a/src/api/chart-api.ts b/src/api/chart-api.ts
-index d95ad9f..7d691e2 100644
+index 71d642c..b6bc1c8 100644
 --- a/src/api/chart-api.ts
 +++ b/src/api/chart-api.ts
 @@ -1,4 +1,4 @@
@@ -29,7 +27,7 @@ index d95ad9f..7d691e2 100644
  
  import { ensureDefined } from '../helpers/assertions';
  import { Delegate } from '../helpers/delegate';
-@@ -29,7 +29,7 @@ import {
+@@ -30,7 +30,7 @@ import {
  import { CandlestickSeriesApi } from './candlestick-series-api';
  import { DataUpdatesConsumer, SeriesDataItemTypeMap } from './data-consumer';
  import { DataLayer, DataUpdateResponse, SeriesChanges } from './data-layer';
@@ -38,7 +36,7 @@ index d95ad9f..7d691e2 100644
  import { IPriceScaleApi } from './iprice-scale-api';
  import { ISeriesApi } from './iseries-api';
  import { ITimeScaleApi } from './itime-scale-api';
-@@ -143,6 +143,7 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+@@ -156,6 +156,7 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
  
  	private readonly _clickedDelegate: Delegate<MouseEventParams> = new Delegate();
  	private readonly _crosshairMovedDelegate: Delegate<MouseEventParams> = new Delegate();
@@ -46,7 +44,7 @@ index d95ad9f..7d691e2 100644
  
  	private readonly _timeScaleApi: TimeScaleApi;
  
-@@ -169,6 +170,14 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+@@ -182,6 +183,14 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
  			},
  			this
  		);
@@ -61,7 +59,7 @@ index d95ad9f..7d691e2 100644
  
  		const model = this._chartWidget.model();
  		this._timeScaleApi = new TimeScaleApi(model);
-@@ -185,6 +194,7 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+@@ -198,6 +207,7 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
  	public remove(): void {
  		this._chartWidget.clicked().unsubscribeAll(this);
  		this._chartWidget.crosshairMoved().unsubscribeAll(this);
@@ -69,7 +67,7 @@ index d95ad9f..7d691e2 100644
  
  		this._timeScaleApi.destroy();
  		this._chartWidget.destroy();
-@@ -194,6 +204,7 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+@@ -207,6 +217,7 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
  
  		this._clickedDelegate.destroy();
  		this._crosshairMovedDelegate.destroy();
@@ -77,7 +75,7 @@ index d95ad9f..7d691e2 100644
  		this._dataLayer.destroy();
  	}
  
-@@ -309,6 +320,14 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+@@ -322,6 +333,14 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
  		this._crosshairMovedDelegate.unsubscribe(handler);
  	}
  
@@ -92,7 +90,7 @@ index d95ad9f..7d691e2 100644
  	public priceScale(priceScaleId?: string): IPriceScaleApi {
  		if (priceScaleId === undefined) {
  			warn('Using ChartApi.priceScale() method without arguments has been deprecated, pass valid price scale id instead');
-@@ -363,4 +382,11 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
+@@ -376,4 +395,11 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
  			seriesPrices,
  		};
  	}
@@ -164,27 +162,6 @@ index 4390cdc..d588655 100644
  	/**
  	 * Returns a width of the price scale if it's visible or 0 if invisible.
  	 */
-diff --git a/src/api/iseries-api.ts b/src/api/iseries-api.ts
-index b857e9c..ef75301 100644
---- a/src/api/iseries-api.ts
-+++ b/src/api/iseries-api.ts
-@@ -1,6 +1,7 @@
- import { BarPrice } from '../model/bar';
- import { Coordinate } from '../model/coordinate';
- import { PriceLineOptions } from '../model/price-line-options';
-+import { Series } from '../model/series';
- import { SeriesMarker } from '../model/series-markers';
- import {
- 	SeriesOptionsMap,
-@@ -34,6 +35,8 @@ export interface IPriceFormatter {
- }
- 
- export interface ISeriesApi<TSeriesType extends SeriesType> {
-+	series(): Series<TSeriesType>;
-+
- 	/**
- 	 * Returns current price formatter
- 	 *
 diff --git a/src/api/options/price-line-options-defaults.ts b/src/api/options/price-line-options-defaults.ts
 index 3d281fe..82f4db8 100644
 --- a/src/api/options/price-line-options-defaults.ts
@@ -211,7 +188,7 @@ index 3f3e366..0025d03 100644
  		return ensureNotNull(this._chartWidget.model().findPriceScale(this._priceScaleId)).priceScale;
  	}
 diff --git a/src/gui/chart-widget.ts b/src/gui/chart-widget.ts
-index 1723174..66207d5 100644
+index dcb0d5d..1f10592 100644
 --- a/src/gui/chart-widget.ts
 +++ b/src/gui/chart-widget.ts
 @@ -8,6 +8,7 @@ import { DeepPartial } from '../helpers/strict-type-checks';
@@ -297,7 +274,7 @@ index 1723174..66207d5 100644
  		const display = this._options.timeScale.visible ? '' : 'none';
  		this._timeAxisWidget.getElement().style.display = display;
 diff --git a/src/gui/price-axis-widget.ts b/src/gui/price-axis-widget.ts
-index 8c4d2c3..f962dd1 100644
+index 8cad25f..e583aad 100644
 --- a/src/gui/price-axis-widget.ts
 +++ b/src/gui/price-axis-widget.ts
 @@ -6,12 +6,14 @@ import { IDestroyable } from '../helpers/idestroyable';
@@ -308,7 +285,7 @@ index 8c4d2c3..f962dd1 100644
  import { IDataSource } from '../model/idata-source';
  import { InvalidationLevel } from '../model/invalidate-mask';
  import { IPriceDataSource } from '../model/iprice-data-source';
- import { LayoutOptions } from '../model/layout-options';
+ import { LayoutOptionsInternal } from '../model/layout-options';
  import { PriceScalePosition } from '../model/pane';
  import { PriceScale } from '../model/price-scale';
 +import { Series } from '../model/series';
@@ -341,7 +318,7 @@ index 8c4d2c3..f962dd1 100644
  			mouseDownEvent: this._mouseDownEvent.bind(this),
  			pressedMouseMoveEvent: this._pressedMouseMoveEvent.bind(this),
  			mouseDownOutsideEvent: this._mouseDownOutsideEvent.bind(this),
-@@ -283,54 +290,139 @@ export class PriceAxisWidget implements IDestroyable {
+@@ -291,54 +298,139 @@ export class PriceAxisWidget implements IDestroyable {
  		return this._canvasBinding.canvas;
  	}
  
@@ -406,7 +383,7 @@ index 8c4d2c3..f962dd1 100644
  		const model = this._pane.chart().model();
  		const pane = this._pane.state();
 -		this._mousedown = true;
- 		model.startScalePrice(pane, this._priceScale, e.localY as Coordinate);
+ 		model.startScalePrice(pane, this._priceScale, e.localY);
  	}
  
  	private _pressedMouseMoveEvent(e: TouchMouseEvent): void {
@@ -430,7 +407,7 @@ index 8c4d2c3..f962dd1 100644
  		const model = this._pane.chart().model();
  		const pane = this._pane.state();
 -		const priceScale = this._priceScale;
- 		model.scalePriceTo(pane, priceScale, e.localY as Coordinate);
+ 		model.scalePriceTo(pane, priceScale, e.localY);
  	}
  
  	private _mouseDownOutsideEvent(): void {
@@ -492,7 +469,7 @@ index 8c4d2c3..f962dd1 100644
  		if (this._pane.chart().options().handleScale.axisDoubleClickReset) {
  			this.reset();
  		}
-@@ -341,6 +433,16 @@ export class PriceAxisWidget implements IDestroyable {
+@@ -349,6 +441,16 @@ export class PriceAxisWidget implements IDestroyable {
  			return;
  		}
  
@@ -509,7 +486,7 @@ index 8c4d2c3..f962dd1 100644
  		const model = this._pane.chart().model();
  		if (model.options().handleScale.axisPressedMouseMove.price && !this._priceScale.isPercentage() && !this._priceScale.isIndexedTo100()) {
  			this._setCursor(CursorType.NsResize);
-@@ -601,7 +703,16 @@ export class PriceAxisWidget implements IDestroyable {
+@@ -617,7 +719,16 @@ export class PriceAxisWidget implements IDestroyable {
  	}
  
  	private _setCursor(type: CursorType): void {
@@ -528,10 +505,10 @@ index 8c4d2c3..f962dd1 100644
  
  	private _onMarksChanged(): void {
 diff --git a/src/model/chart-model.ts b/src/model/chart-model.ts
-index 218dc53..932bb66 100644
+index 2aecb1b..26ece08 100644
 --- a/src/model/chart-model.ts
 +++ b/src/model/chart-model.ts
-@@ -11,6 +11,7 @@ import { PriceAxisRendererOptionsProvider } from '../renderers/price-axis-render
+@@ -12,6 +12,7 @@ import { PriceAxisRendererOptionsProvider } from '../renderers/price-axis-render
  
  import { Coordinate } from './coordinate';
  import { Crosshair, CrosshairOptions } from './crosshair';
@@ -539,15 +516,15 @@ index 218dc53..932bb66 100644
  import { DefaultPriceScaleId, isDefaultPriceScale } from './default-price-scale';
  import { GridOptions } from './grid';
  import { InvalidateMask, InvalidationLevel } from './invalidate-mask';
-@@ -140,6 +141,7 @@ export class ChartModel implements IDestroyable {
+@@ -161,6 +162,7 @@ export class ChartModel implements IDestroyable {
  	private _hoveredSource: HoveredSource | null = null;
  	private readonly _priceScalesOptionsChanged: Delegate = new Delegate();
  	private _crosshairMoved: Delegate<TimePointIndex | null, Point | null> = new Delegate();
 +	private _customPriceLineDragged: Delegate<CustomPriceLine, string> = new Delegate();
  
- 	public constructor(invalidateHandler: InvalidateHandler, options: ChartOptionsInternal) {
- 		this._invalidateHandler = invalidateHandler;
-@@ -256,6 +258,10 @@ export class ChartModel implements IDestroyable {
+ 	private _backgroundTopColor: string;
+ 	private _backgroundBottomColor: string;
+@@ -291,6 +293,10 @@ export class ChartModel implements IDestroyable {
  		return this._crosshairMoved;
  	}
  
@@ -558,7 +535,7 @@ index 218dc53..932bb66 100644
  	public setPaneHeight(pane: Pane, height: number): void {
  		pane.setHeight(height);
  		this.recalculateAllPanes();
-@@ -520,6 +526,10 @@ export class ChartModel implements IDestroyable {
+@@ -555,6 +561,10 @@ export class ChartModel implements IDestroyable {
  		this.updateCrosshair();
  	}
  
@@ -569,21 +546,6 @@ index 218dc53..932bb66 100644
  	public destroy(): void {
  		this._panes.forEach((p: Pane) => p.destroy());
  		this._panes.length = 0;
-diff --git a/src/model/custom-price-line.ts b/src/model/custom-price-line.ts
-index dc866a3..39427d6 100644
---- a/src/model/custom-price-line.ts
-+++ b/src/model/custom-price-line.ts
-@@ -35,6 +35,10 @@ export class CustomPriceLine {
- 		return this._options;
- 	}
- 
-+	public series(): Series {
-+		return this._series;
-+	}
-+
- 	public paneViews(): readonly IPaneView[] {
- 		return [
- 			this._priceLineView,
 diff --git a/src/model/price-line-options.ts b/src/model/price-line-options.ts
 index 912d3ab..490d778 100644
 --- a/src/model/price-line-options.ts
@@ -595,10 +557,10 @@ index 912d3ab..490d778 100644
 +	draggable: boolean;
  }
 diff --git a/src/model/series.ts b/src/model/series.ts
-index 8cf8442..c522365 100644
+index 71df249..07bfbe5 100644
 --- a/src/model/series.ts
 +++ b/src/model/series.ts
-@@ -301,6 +301,10 @@ export class Series<T extends SeriesType = SeriesType> extends PriceDataSource i
+@@ -315,6 +315,10 @@ export class Series<T extends SeriesType = SeriesType> extends PriceDataSource i
  		this.model().updateSource(this);
  	}
  
@@ -631,5 +593,5 @@ index f06a695..4baa32b 100644
  		//  x---x---x   or   x---x   o   or   start
  		if (lineType === LineType.WithSteps) {
 -- 
-2.29.0.windows.1
+2.30.1 (Apple Git-130)
 

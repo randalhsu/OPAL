@@ -2,6 +2,9 @@ staticfiles/
 
 .vscode/
 
+.DS_Store
+lightweight-charts.standalone.production.js
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

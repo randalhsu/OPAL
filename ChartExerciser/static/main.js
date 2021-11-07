@@ -26,6 +26,12 @@ const DEFAULT_CONFIGS = {
     sma22Color: '17A2B8',
     sma23Period: '0',
     sma23Color: '6C757D',
+    ema21Period: '0',
+    ema21Color: '6C757D',
+    ema22Period: '0',
+    ema22Color: '17A2B8',
+    ema23Period: '0',
+    ema23Color: '007BFF',
 };
 
 const configs = { ...DEFAULT_CONFIGS };
@@ -158,24 +164,24 @@ function updateLinkToCurrentTickerAndTimestamp() {
     }
     $('#color-dailyOpenPrice').spectrum(colorPickerOptions);
 
-    for (const sma of ['sma11', 'sma21', 'sma22', 'sma23']) {
-        const smaPeriodInput = document.getElementById(`${sma}-period`);
-        smaPeriodInput.value = configs[`${sma}Period`];
-        smaPeriodInput.addEventListener('change', (event) => {
-            if (smaPeriodInput.checkValidity()) {
-                configs[`${sma}Period`] = event.target.value;
-                updateSMA();
+    for (const ma of ['sma11', 'sma21', 'sma22', 'sma23', 'ema21', 'ema22', 'ema23']) {
+        const maPeriodInput = document.getElementById(`${ma}-period`);
+        maPeriodInput.value = configs[`${ma}Period`];
+        maPeriodInput.addEventListener('change', (event) => {
+            if (maPeriodInput.checkValidity()) {
+                configs[`${ma}Period`] = event.target.value;
+                updateMA();
                 updateNewURLDisplay();
             }
         });
 
-        colorPickerOptions.color = getHexColor(configs[`${sma}Color`]);
+        colorPickerOptions.color = getHexColor(configs[`${ma}Color`]);
         colorPickerOptions.change = (color) => {
-            configs[`${sma}Color`] = color.toHex().toUpperCase();
-            updateSMA();
+            configs[`${ma}Color`] = color.toHex().toUpperCase();
+            updateMA();
             updateNewURLDisplay();
         }
-        $(`#color-${sma}`).spectrum(colorPickerOptions);
+        $(`#color-${ma}`).spectrum(colorPickerOptions);
     }
 
     const mapping = {
@@ -736,7 +742,7 @@ function attachDailyOpenPriceLineToSeries(series, price) {
     });
 }
 
-(function attachSMALinesToCharts() {
+(function attachMALinesToCharts() {
     const lineOptions = {
         crosshairMarkerVisible: false,
         priceLineVisible: false,
@@ -744,14 +750,17 @@ function attachDailyOpenPriceLineToSeries(series, price) {
         baseLineVisible: false,
         lineWidth: 1,
     };
-    for (const sma of ['sma11', 'sma21', 'sma22', 'sma23']) {
-        const chart = sma[3] === '1' ? chart1 : chart2;
-        lineOptions.color = getHexColor(DEFAULT_CONFIGS[`${sma}Color`]);
-        chart[`${sma}LineSeries`] = chart.addLineSeries(lineOptions);
+    for (const ma of ['sma11', 'sma21', 'sma22', 'sma23', 'ema21', 'ema22', 'ema23']) {
+        const chart = ma[3] === '1' ? chart1 : chart2;
+        lineOptions.color = getHexColor(DEFAULT_CONFIGS[`${ma}Color`]);
+        chart[`${ma}LineSeries`] = chart.addLineSeries(lineOptions);
     }
 })();
 
 function calculateSMA(bars, period) {
+    if (period < 1 || bars.length < period) {
+        return [];
+    }
     const avg = (array) => array.map(bar => bar.close).reduce((p, c, i) => p + (c - p) / (i + 1), 0);
     const result = [];
     for (let i = period - 1; i < bars.length; ++i) {
@@ -761,18 +770,30 @@ function calculateSMA(bars, period) {
     return result;
 }
 
-function updateSMA() {
-    for (const sma of ['sma11', 'sma21', 'sma22', 'sma23']) {
-        const chart = sma[3] === '1' ? chart1 : chart2;
-        const period = parseInt(configs[`${sma}Period`]);
+function calculateEMA(bars, period) {
+    if (period < 1 || bars.length < period) {
+        return [];
+    }
+    const k = 2 / (period + 1);
+    const result = [{ time: bars[0].time, value: bars[0].close }];
+    for (let i = 1; i < bars.length; ++i) {
+        result.push({ time: bars[i].time, value: bars[i].close * k + result[i - 1].value * (1 - k) });
+    }
+    return result;
+}
+
+function updateMA() {
+    for (const ma of ['sma11', 'sma21', 'sma22', 'sma23', 'ema21', 'ema22', 'ema23']) {
+        const chart = ma[3] === '1' ? chart1 : chart2;
+        const period = parseInt(configs[`${ma}Period`]);
         if (isNaN(period) || period < 1) {
-            chart[`${sma}LineSeries`].setData([]);
+            chart[`${ma}LineSeries`].setData([]);
             continue;
         }
-        const bars = sma[3] === '1' ? hourlyBars : displayBars;
-        const smaData = calculateSMA(bars, period);
-        chart[`${sma}LineSeries`].applyOptions({ color: getHexColor(configs[`${sma}Color`]) });
-        chart[`${sma}LineSeries`].setData(smaData);
+        const bars = ma[3] === '1' ? hourlyBars : displayBars;
+        const maData = (ma.startsWith('sma') ? calculateSMA(bars, period) : calculateEMA(bars, period));
+        chart[`${ma}LineSeries`].applyOptions({ color: getHexColor(configs[`${ma}Color`]) });
+        chart[`${ma}LineSeries`].setData(maData);
     }
 }
 
@@ -1695,7 +1716,7 @@ function commonUpdate() {
 
     updateSeriesPriceScales(candleSeries1, candleSeries2);
     drawDailyOpenPrice();
-    updateSMA();
+    updateMA();
     updateDatetimepickerCurrentDatetime(getCurrentChartTime());
     updateOrdersTable();
     updatePositionsTable();

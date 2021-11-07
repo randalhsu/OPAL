@@ -36,13 +36,18 @@ const DEFAULT_CONFIGS = {
 
 const configs = { ...DEFAULT_CONFIGS };
 
+const MOBILE_MODE_PATHNAME = '/m';
+let isMobileMode = false;
+
 (function updateConfigsFromURL() {
-    const params = (new URL(window.location.href)).searchParams;
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
     for (const [key, value] of params) {
         if (configs.hasOwnProperty(key)) {
             configs[key] = value;
         }
     }
+    isMobileMode = (url.pathname === MOBILE_MODE_PATHNAME);
 })();
 
 
@@ -75,9 +80,9 @@ function updateLinkToCurrentTickerAndTimestamp() {
 
     function updateNewURLDisplay() {
         const paramsString = getNonDefaultConfigsParams().toString();
+        const url = new URL(document.location.href);
         let html = '';
         if (paramsString) {
-            const url = new URL(document.location.href);
             const newURL = `${url.origin}${url.pathname}?${paramsString}`;
             html = `
                 <span class="text-danger">⚠️ Use this link to take effect:</span><br/>
@@ -85,6 +90,12 @@ function updateLinkToCurrentTickerAndTimestamp() {
             `;
         }
         document.getElementById('new-url').innerHTML = html;
+
+        if (url.pathname !== MOBILE_MODE_PATHNAME) {
+            const mobileLinkURL = `${url.origin}${MOBILE_MODE_PATHNAME}?${paramsString}`;
+            const mobileLinkHtml = `[<a href="${mobileLinkURL}" target="_blank">Mobile mode <i class="fa fa-external-link" aria-hidden="true"></i></a>]`;
+            document.getElementById('mobile-mode-url').innerHTML = mobileLinkHtml;
+        }
     }
 
     function applyCandleColor(part, hexColorString) {
@@ -318,6 +329,10 @@ function moveResizerToBottomRightEdgeOfChart(resizer) {
 }
 
 function registerChartResizersHandler() {
+    if (isMobileMode) {
+        return;
+    }
+
     const resetResizer = (resizer) => {
         resizer.style.cursor = 'grab';
         resizer.onmousemove = null
@@ -432,6 +447,9 @@ function registerChartsPointerEventHandler() {
         pointerOverChart2 = true;
     });
     chart2El.addEventListener('mouseleave', () => {
+        if (isMobileMode) {
+            return;
+        }
         pointerOverChart2 = false;
         chart1.clearCrossHair();
         pointerHoverPriceString = null;
@@ -2022,7 +2040,7 @@ function initDatetimepicker() {
         format: DATETIME_FORMAT,
         dayViewHeaderFormat: 'YYYY-MM',
         stepping: 5,
-        sideBySide: true,
+        sideBySide: (isMobileMode ? false : true),
         useCurrent: true,
     });
 

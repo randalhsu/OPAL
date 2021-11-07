@@ -9,23 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/css/tempusdominus-bootstrap-4.min.css" integrity="sha512-3JRrEUwaCkFUBLK1N8HehwQgu8e23jTH4np5NHOmQOobuC4ROQxFwFgBLTnhcnQRMs84muMh0PnnwXlPq5MGjg==" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.8.1/spectrum.min.css" integrity="sha512-KuSX+43gVS5MEIJD2ewtrFPOHqC1PJnL8o2f5ciggPC0JUZ8XV0QXlfArO1mSzKkVFdRjsBDfrTU96C5SuRfqQ==" crossorigin="anonymous" />
-    <style>
-      .btn-shift {
-        margin-top: -6px;
-      }
-      .floating-panel {
-        display: none;
-        background-color: #FFFFFF7F;
-        width: max-content;
-        padding: 8px;
-        pointer-events: none;
-        z-index: 1030;
-      }
-      .floating-panel div {
-        line-height: 18px;
-        height: 18px;
-      }
-    </style>
 
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js" integrity="sha512-B4skI5FiLurS86aioJx9VfozI1wjqrn6aTdJH+YQUmCZum/ZibPBTX55k5d9XM6EsKePDInkLVrN7vPmJxc1qA==" crossorigin="anonymous"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js" integrity="sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==" crossorigin="anonymous"></script>
@@ -38,7 +21,7 @@
     <title>Practice Your Price Action Skill</title>
 </head>
 <body>
-<div class="container-fluid mt-3 clearfix">
+<div class="container-fluid mt-1 px-2 clearfix flex-nowrap">
   <div class="dropdown d-inline-flex">
     <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
       Ticker
@@ -50,7 +33,7 @@
     </div>
   </div>
   <label class="mx-3 text-monospace font-weight-bold h5" style="width: 3ch" id="current-ticker"></label>
-  <div class="form-group d-inline-flex">
+  <div class="form-group d-inline-flex m-0">
     <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
     <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker1" id="datetimepicker-input" maxlength="16" style="width: 20ch"/>
     <div class="input-group-append" data-target="#datetimepicker1" data-toggle="datetimepicker">
@@ -59,45 +42,37 @@
     </div>
   </div>
   <label class="text-monospace ml-2 mr-2" id="day-of-week" title="Day of Week"></label>
-  <button type="button" class="btn btn-primary btn-shift mr-0 px-3 py-1.5" id="stepback-button" title="Stepback 1 bar&#013;(Hotkey: Z / ←)"><i class="fa fa-step-backward" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-primary btn-shift mr-0 px-3 py-1.5" id="step-button" title="Step 1 bar&#013;(Hotkey: Space / →)"><i class="fa fa-step-forward" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-primary btn-shift mr-1 py-1.5" id="fast-forward-button" title="Fast forward 24 bars&#013;(Hotkey: F)"><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-primary btn-shift mr-1 py-1.5" id="create-alert-button" data-toggle="modal" data-target="#createAlertModal" title="Create alert&#013;(Hotkey: Shift+A)"><i class="fa fa-bell" aria-hidden="true"></i></button>
-  <button type="button" class="btn btn-success btn-shift text-monospace mr-0 px-3 py-1.5" id="buy-button" title="Buy market&#013;(Hotkey: Shift+B)&#013;&#013;(💡 Tip: To place a Buy order, hover over the charts and press hotkey &quot;B&quot;.)">B</button>
-  <button type="button" class="btn btn-danger btn-shift text-monospace mr-1 px-3 py-1.5" id="sell-button" title="Sell market&#013;(Hotkey: Shift+S)&#013;&#013;(💡 Tip: To place a Sell order, hover over the charts and press hotkey &quot;S&quot;.)">S</button>
   <label class="mx-1 d-inline-flex mr-auto" id="message"></label>
-  <div class="float-right">
-    <a href="" target="_blank" id="freeze-status-link"><button type="button" class="btn btn-secondary" id="freeze-status-link-button" title="Open link to current ticker and timestamp snapshot"><i class="fa fa-link" aria-hidden="true"></i></button></a>
-    <button type="button" class="btn btn-secondary ml-1" id="options-button" title="Options" data-toggle="modal" data-target="#optionsModal"><i class="fa fa-cog" aria-hidden="true"></i></button>
-    <button type="button" class="btn btn-info ml-1" id="help-button" title="Help" data-toggle="modal" data-target="#helpModal"><i class="fa fa-question-circle-o" aria-hidden="true"></i></button>
-  </div>
 </div>
-<div class="container-fluid">
+<div class="container-fluid mt-1 px-2">
   <div class="d-flex flex-row flex-nowrap justify-content-between">
     <div id="chart1"></div>
     <div id="chart2"></div>
   </div>
-  <div class="row mt-2">
-    <div class="col d-flex justify-content-between">
-      <div class="ml-1">
-        <input type="checkbox" id="info-panel-checkbox" name="info-panel-checkbox">
-        <label for="info-panel-checkbox" title="Display info panel&#013;(Hotkey: D)">Panel</label>
-      </div>
-      <button type="button" class="btn btn-dark btn-lg" id="fit-chart1-button" title="Fit price scales to H1 chart&#013;(Hotkey: Q)">Fit H1</button>
-      <button type="button" class="btn btn-lg invisible">inv</button>
-    </div>
-    <div class="col d-flex justify-content-between">
-      <button type="button" class="btn btn-lg invisible">inv padding</button>
-      <button type="button" class="btn btn-dark btn-lg" id="fit-chart2-button" title="Fit price scales to M5 chart&#013;(Hotkey: W / E)">Fit M5</button>
-      <button type="button" class="btn btn-dark btn-lg" id="reset-scales-button" title="Reset all time and price scales&#013;(Hotkey: R)">Reset Scales</button>
-    </div>
+  <div class="d-flex flex-row flex-nowrap justify-content-between mt-2">
+    <button type="button" class="btn btn-primary mr-2" id="create-alert-button" title="Create alert"><i class="fa fa-bell" aria-hidden="true"></i></button>
+    <button type="button" class="btn btn-success text-monospace mr-2 px-4" id="buy-button" title="Buy market&#013;&#013;(💡 Tip: To place a Buy order, hover over the charts then press this button.)">B</button>
+    <button type="button" class="btn btn-danger text-monospace mr-2 px-4" id="sell-button" title="Sell market&#013;&#013;(💡 Tip: To place a Sell order, hover over the charts then press this button.)">S</button>
+    <button type="button" class="btn btn-dark mr-1" id="fit-chart1-button" title="Fit price scales to H1 chart">Fit H1</button>
+    <button type="button" class="btn btn-dark mr-1" id="fit-chart2-button" title="Fit price scales to M5 chart">Fit M5</button>
+    <button type="button" class="btn btn-dark mr-1" id="reset-scales-button" title="Reset all time and price scales">Reset</button>
+    <a href="" target="_blank" id="freeze-status-link"><button type="button" class="btn btn-secondary mr-1" id="freeze-status-link-button" title="Open link to current ticker and timestamp snapshot"><i class="fa fa-link" aria-hidden="true"></i></button></a>
+    <button type="button" class="btn btn-secondary mr-1" id="options-button" title="Options" data-toggle="modal" data-target="#optionsModal"><i class="fa fa-cog" aria-hidden="true"></i></button>
+    <button type="button" class="btn btn-info mr-2" id="help-button" title="Help" data-toggle="modal" data-target="#helpModal"><i class="fa fa-question-circle-o" aria-hidden="true"></i></button>
+    <button type="button" class="btn btn-primary mr-2 px-3" id="stepback-button" title="Stepback 1 bar"><i class="fa fa-step-backward" aria-hidden="true"></i></button>
+    <button type="button" class="btn btn-primary mr-2" id="fast-forward-button" title="Fast forward 24 bars"><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
+    <button type="button" class="btn btn-primary px-5" id="step-button" title="Step 1 bar"><i class="fa fa-step-forward" aria-hidden="true"></i></button>
+  </div>
+  <div class="d-none">
+    <input type="checkbox" id="info-panel-checkbox" name="info-panel-checkbox">
+    <label for="info-panel-checkbox" title="Display info panel">Panel</label>
   </div>
   <div class="row my-3">
     <div class="col">
-      <ul class="list-group" id="alerts-ul" title="Hover over the charts and press hotkey &quot;A&quot; to create an alert"></ul>
+      <ul class="list-group" id="alerts-ul"></ul>
     </div>
     <div class="col">
-      <ul class="list-group" id="orders-ul" title="Hover over the charts and press hotkey &quot;B&quot; or &quot;S&quot; to place an order"></ul>
+      <ul class="list-group" id="orders-ul"></ul>
     </div>
     <div class="col">
       <ul class="list-group" id="positions-ul"></ul>
@@ -105,8 +80,8 @@
   </div>
 </div>
 
-<div id="chart1-resizer" class="position-absolute text-light user-select-none" style="z-index: 1030">⇲</div>
-<div id="chart2-resizer" class="position-absolute text-light user-select-none" style="z-index: 1030">⇲</div>
+<div id="chart1-resizer" class="d-none position-absolute text-light user-select-none" style="z-index: 1030">⇲</div>
+<div id="chart2-resizer" class="d-none position-absolute text-light user-select-none" style="z-index: 1030">⇲</div>
 
 <div class="modal fade" id="createAlertModal" aria-labelledby="createAlertModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -118,7 +93,6 @@
       <div class="modal-body">
         <div class="container-fluid form-group">
           <input type="number" class="form-control" id="alert-price" name="alert-price" value="0" min="0" step="1"/>
-          <small class="form-text text-muted">💡 Tip: You can also hover over the charts and press hotkey <span class="font-weight-bold">A</span> to add an alert.</small>
         </div>
       </div>
       <div class="modal-footer">
@@ -187,7 +161,7 @@
             <div class="col"><input type="text" id="color-borderDownColor"/></div>
           </div>
           <div class="row mt-4">
-            <div class="col">H1 <abbr title="Simple Moving Average">SMA</abbr> period <abbr title="To hide SMA, set its period as 0."><i class="fa fa-question-circle-o" aria-hidden="true"></i></abbr>:</div>
+            <div class="col">H1 SMA period <abbr title="To hide SMA, set its period as 0."><i class="fa fa-question-circle-o" aria-hidden="true"></i></abbr>:</div>
             <div class="col"><input type="number" value="0" min="0" step="1" class="w-50" id="sma11-period" required/></div>
             <div class="col">H1 SMA color:</div>
             <div class="col"><input type="text" id="color-sma11"/></div>
@@ -228,13 +202,10 @@
             <div class="col">EMA#3 color:</div>
             <div class="col"><input type="text" id="color-ema23"/></div>
           </div>
-          <div class="d-flex justify-content-center mt-3">
-            <div id="mobile-mode-url"></div>
-          </div>
         </div>
       </div>
       <div class="modal-footer">
-        <div id="new-url" class="w-100"></div>
+        <div id='new-url' class="w-100"></div>
       </div>
     </div>
   </div>
@@ -286,7 +257,7 @@
   </div>
 </div>
 
-<div class="container floating-panel position-absolute rounded border border-secondary text-monospace font-weight-light" id="info-panel"></div>
+<div class="d-none container position-absolute rounded border border-secondary text-monospace font-weight-light" id="info-panel"></div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>

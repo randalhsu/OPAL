@@ -5,3 +5,8 @@ from .consumers import get_all_tickers
 def index(request):
     tickers = get_all_tickers()
     return render(request, 'index.html', {'tickers': tickers})
+
+
+def mobile(request):
+    tickers = get_all_tickers()
+    return render(request, 'mobile.html', {'tickers': tickers})

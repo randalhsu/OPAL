@@ -1462,7 +1462,7 @@ function addPositionLines(position, markers) {
         lastValueVisible: false,
         baseLineVisible: false,
         color: PRICE_LINE_COLOR[position.type],
-        lineWidth: 1,
+        lineWidth: 2,
     };
     const data = [
         { time: markers[0].time, value: markers[0].price },

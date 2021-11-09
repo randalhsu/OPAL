@@ -2,7 +2,7 @@
 
 Traders can practice and refine their price action skills with this Django web app.
 
-[Deployed site](https://practicepriceaction.herokuapp.com?help=1)
+Deployed site: [Desktop layout](https://practicepriceaction.herokuapp.com?help=1) / [mobile layout](https://practicepriceaction.herokuapp.com/m)
 
 ## Features
 
@@ -55,7 +55,8 @@ heroku ps:scale web=1:free
 
 ## Developer's Note
 
-Backend main logic: [`ChartExerciser/consumers.py`](https://github.com/randalhsu/OPAL/blob/main/ChartExerciser/consumers.py)
+Backend main logic:
+* [`ChartExerciser/consumers.py`](https://github.com/randalhsu/OPAL/blob/main/ChartExerciser/consumers.py)
 
 Frontend main logic:
 * [`ChartExerciser/templates/index.html`](https://github.com/randalhsu/OPAL/blob/main/ChartExerciser/templates/index.html)

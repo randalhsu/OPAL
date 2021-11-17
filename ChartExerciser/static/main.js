@@ -430,6 +430,9 @@ function registerChartsPointerEventHandler() {
     });
 
     chart1El.addEventListener('mouseleave', () => {
+        if (isMobileMode) {
+            return;
+        }
         pointerOverChart1 = false;
         chart2.clearCrossHair();
         pointerHoverPriceString = null;
@@ -686,8 +689,11 @@ function updateSeriesPriceScales(series1, series2, dominantSeries) {
     const oneBarTimeMarginInSeconds = (series === series1 ? 3600 : 300);
 
     const barsInfo = series.barsInLogicalRange(chart.timeScale().getVisibleLogicalRange());
+    if (barsInfo === null) {
+        return;
+    }
     const filteredData = displayBars.filter(
-        e => barsInfo.from <= e.time && e.time <= barsInfo.to + oneBarTimeMarginInSeconds * 1000
+        e => barsInfo.from <= e.time && e.time <= barsInfo.to + oneBarTimeMarginInSeconds
     );
 
     const minPrice = getMinMax(filteredData.map(e => e.low)).min;
@@ -706,6 +712,12 @@ function updateSeriesPriceScales(series1, series2, dominantSeries) {
     };
     series1.applyOptions(options);
     series2.applyOptions(options);
+}
+
+for (const chart of [chart1, chart2]) {
+    chart.timeScale().subscribeVisibleTimeRangeChange(() =>
+        updateSeriesPriceScales(candleSeries1, candleSeries2, specifiedDominantSeries)
+    );
 }
 
 function sleep(ms) {

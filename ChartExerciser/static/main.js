@@ -1860,7 +1860,13 @@ function registerButtonsHandler() {
 
     document.getElementById('stepback-button').addEventListener('click', function (e) {
         $(this).trigger('blur');
-        stepback();
+        if (isMobileMode && pointerHoverTimestamp !== null) {
+            sendGotoAction(pointerHoverTimestamp);
+            chart1.clearCrossHair();
+            chart2.clearCrossHair();
+        } else {
+            stepback();
+        }
     });
     document.getElementById('step-button').addEventListener('click', function (e) {
         $(this).trigger('blur');

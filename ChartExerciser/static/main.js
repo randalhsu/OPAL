@@ -1411,6 +1411,15 @@ function removeAllPositions() {
     removeAllClosedPositions();
 }
 
+function removeFuturePositions(timestamp) {
+    for (const position of positions) {
+        if (timestamp < position.openedTime ||
+            (position.closedTime !== null && timestamp < position.closedTime)) {
+            removePosition(position);
+        }
+    }
+}
+
 function updatePositionsTable() {
     const ul = document.getElementById('positions-ul');
     while (ul.firstChild) {
@@ -1590,6 +1599,9 @@ function registerChangeTickerHandler() {
         button.onclick = () => {
             const ticker = button.innerText;
             if (ticker !== getCurrentTicker()) {
+                removeAllAlerts();
+                removeAllOrders();
+                removeAllPositions();
                 setCurrentTicker(ticker);
                 messageQueue = [];
                 sendGotoAction(getCurrentChartTime());
@@ -1700,14 +1712,11 @@ function handleResponse(response) {
             break;
 
         case 'goto':
-            removeAllAlerts();
-            removeAllOrders();
-            removeAllPositions();
-
             fetchedBars = response.data;
             adjustBarsTime(fetchedBars);
 
             const timestamp = convertServerTimestampToClientTimestamp(response.timestamp);
+            removeFuturePositions(timestamp);
             let endIndex = fetchedBars.length - 1;
             while (endIndex > 0 && fetchedBars[endIndex].time >= timestamp) {
                 --endIndex;

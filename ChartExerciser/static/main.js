@@ -1796,6 +1796,7 @@ function stepback() {
         return;
     }
     displayBars.pop();
+    removeFuturePositions(getCurrentChartTime());
     commonUpdate();
 }
 

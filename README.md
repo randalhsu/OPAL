@@ -28,12 +28,17 @@ Deployed site: [Desktop layout](https://practicepriceaction.herokuapp.com?help=1
   * `B`: Buy order
   * `S`: Sell order
   * `D`: Toggle price panel
+  * `G`: Go to hovered time
+* Scales:
+  * `Q`: Fit to left chart
+  * `W`/`E`: Fit to right chart
+  * `R`: Reset all scales
 
 ## How to deploy locally
 
 1. Build [lightweight-charts](https://github.com/tradingview/lightweight-charts) with the instructions in [`lightweight-charts-patch`](https://github.com/randalhsu/OPAL/tree/main/lightweight-charts-patch) folder
 2. Put your historical data into [`static/PriceData`](https://github.com/randalhsu/OPAL/tree/main/static/PriceData) folder
-3. Install Python (tested with v3.9.2) and dependencies: `pip install -r requirements.txt`
+3. Install Python (tested with v3.9.2+) and dependencies: `pip install -r requirements.txt`
 4. `python manage.py migrate`
 5. `python manage.py runserver`
 6. Browse `http://127.0.0.1:8000/`

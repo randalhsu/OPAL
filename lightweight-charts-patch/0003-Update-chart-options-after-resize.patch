@@ -1,4 +1,4 @@
-From 9c6949fe898ae27d54276e097dd26870bda60459 Mon Sep 17 00:00:00 2001
+From 49f7746de1ab2e11c6eb54d5443e540b9b2b6943 Mon Sep 17 00:00:00 2001
 From: randalhsu <xxx@gmail.com>
 Date: Sat, 20 Feb 2021 16:55:51 +0800
 Subject: [PATCH 3/4] Update chart options after resize
@@ -8,10 +8,10 @@ Subject: [PATCH 3/4] Update chart options after resize
  1 file changed, 3 insertions(+)
 
 diff --git a/src/gui/chart-widget.ts b/src/gui/chart-widget.ts
-index 1f10592..c574987 100644
+index 93fb415f..9c331035 100644
 --- a/src/gui/chart-widget.ts
 +++ b/src/gui/chart-widget.ts
-@@ -189,6 +189,9 @@ export class ChartWidget implements IDestroyable {
+@@ -193,6 +193,9 @@ export class ChartWidget implements IDestroyable {
  		} else {
  			this._model.fullUpdate();
  		}
@@ -22,5 +22,5 @@ index 1f10592..c574987 100644
  
  	public paint(invalidateMask?: InvalidateMask): void {
 -- 
-2.30.1 (Apple Git-130)
+2.32.0 (Apple Git-132)
 

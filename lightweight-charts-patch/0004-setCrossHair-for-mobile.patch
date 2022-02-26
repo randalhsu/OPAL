@@ -1,4 +1,4 @@
-From 5616bdaa4ebb9894a60f47e728adc0fa0bc0e0a3 Mon Sep 17 00:00:00 2001
+From b067a3c282a90029179d388ea0db5219e2967f2c Mon Sep 17 00:00:00 2001
 From: randalhsu <xxx@gmail.com>
 Date: Sat, 6 Nov 2021 11:13:05 +0800
 Subject: [PATCH 4/4] setCrossHair for mobile
@@ -8,10 +8,10 @@ Subject: [PATCH 4/4] setCrossHair for mobile
  1 file changed, 2 insertions(+), 6 deletions(-)
 
 diff --git a/src/gui/pane-widget.ts b/src/gui/pane-widget.ts
-index 42a84a2..0717bbb 100644
+index b32607cb..121a49a4 100644
 --- a/src/gui/pane-widget.ts
 +++ b/src/gui/pane-widget.ts
-@@ -598,14 +598,10 @@ export class PaneWidget implements IDestroyable {
+@@ -508,14 +508,10 @@ export class PaneWidget implements IDestroyable, MouseEventHandlers {
  			const x = xx as Coordinate;
  			const y = yy as Coordinate;
  
@@ -29,5 +29,5 @@ index 42a84a2..0717bbb 100644
  	}
  
 -- 
-2.30.1 (Apple Git-130)
+2.32.0 (Apple Git-132)
 

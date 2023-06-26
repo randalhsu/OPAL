@@ -7,7 +7,7 @@ const DATA_DAILY_OPEN_HOUR = 18;
 
 const DEFAULT_CONFIGS = {
     UTCOffsetHour: '8',
-    ticker: 'MES',
+    ticker: 'ES',
     muteSound: false,
     bgColor: '000000',
     axesTextColor: 'FFFFFF',

@@ -2,7 +2,7 @@
 
 Traders can practice and refine their price action skills with this Django web app.
 
-Deployed site: [Desktop layout](https://practicepriceaction.herokuapp.com?help=1) / [mobile layout](https://practicepriceaction.herokuapp.com/m)
+Deployed site: [Desktop layout](https://opal-3ern.onrender.com/?help=1) / [mobile layout](https://opal-3ern.onrender.com/m)
 
 ## Features
 
@@ -36,27 +36,22 @@ Deployed site: [Desktop layout](https://practicepriceaction.herokuapp.com?help=1
 
 ## How to deploy locally
 
-1. Build [lightweight-charts](https://github.com/tradingview/lightweight-charts) with the instructions in [`lightweight-charts-patch`](https://github.com/randalhsu/OPAL/tree/main/lightweight-charts-patch) folder
-2. Put your historical data into [`static/PriceData`](https://github.com/randalhsu/OPAL/tree/main/static/PriceData) folder
-3. Install Python (tested with v3.9.2+) and dependencies: `pip install -r requirements.txt`
-4. `python manage.py migrate`
-5. `python manage.py runserver`
-6. Browse `http://127.0.0.1:8000/`
+1. (Optional) Put your historical data into [`static/PriceData`](https://github.com/randalhsu/OPAL/tree/main/static/PriceData) folder
+1. Install Python (tested with v3.11.4) and dependencies: `pip install -r requirements.txt`
+1. `python manage.py migrate`
+1. `python manage.py runserver`
+1. Browse `http://127.0.0.1:8000/`
 
-## How to deploy to Heroku
+## How to deploy to `render.com`
 
-Follow the above steps 1 and 2, then:
-
-```
-heroku login
-heroku create {my_app_name}
-heroku git:remote -a {my_app_name}
-heroku config:set SECRET_KEY="my_Pr3c10uSSSsss"
-heroku config:set DEBUG=0
-git push heroku main
-heroku run python manage.py migrate
-heroku ps:scale web=1:free
-```
+1. Create a Web Service with this repo
+1. Set Start Command as: `daphne mysite.asgi:application --port $PORT --bind 0.0.0.0 -v2`
+1. Add Environment Variables:
+   * `PYTHON_VERSION`: `3.11.4`
+   * `ALLOWED_HOSTS`: (deployed service url, e.g. `xxxx-xxxx.onrender.com`)
+   * `SECRET_KEY`: `my_Pr3c10uSSSsss`
+   * `DEBUG`: `0`
+1. Manual Deploy -> Clear build cache & deploy
 
 ## Developer's Note
 
@@ -66,3 +61,4 @@ Backend main logic:
 Frontend main logic:
 * [`ChartExerciser/templates/index.html`](https://github.com/randalhsu/OPAL/blob/main/ChartExerciser/templates/index.html)
 * [`ChartExerciser/static/main.js`](https://github.com/randalhsu/OPAL/blob/main/ChartExerciser/static/main.js)
+
